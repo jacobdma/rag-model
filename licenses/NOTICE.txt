@@ -1,0 +1,93 @@
+NOTICE
+
+This software includes components licensed under various open-source licenses, including Apache License 2.0, MIT License, BSD 3-Clause License, and MPL 2.0.
+
+The following third-party software components are used in this project:
+
+---
+
+Core ML / LLM / RAG Libraries
+
+**transformers**  
+License: Apache License 2.0  
+Source: https://github.com/huggingface/transformers
+
+**torch**  
+License: BSD 3-Clause License  
+Source: https://github.com/pytorch/pytorch
+
+**sentence-transformers**  
+License: Apache License 2.0  
+Source: https://github.com/UKPLab/sentence-transformers
+
+**langchain**  
+License: MIT License  
+Source: https://github.com/langchain-ai/langchain
+
+**langchain-core**  
+License: MIT License  
+Source: https://github.com/langchain-ai/langchain
+
+**langchain-community**  
+License: MIT License  
+Source: https://github.com/langchain-ai/langchain
+
+**langchain-huggingface**  
+License: MIT License  
+Source: https://github.com/langchain-ai/langchain
+
+**langchain-text-splitters**  
+License: MIT License  
+Source: https://github.com/langchain-ai/langchain
+
+**faiss-cpu**  
+License: MIT License  
+Source: https://github.com/facebookresearch/faiss
+
+**pdfplumber**  
+License: MIT License  
+Source: https://github.com/jsvine/pdfplumber
+
+**python-pptx**  
+License: MIT License  
+Source: https://github.com/scanny/python-pptx
+
+**docx2txt**  
+License: MIT License  
+Source: https://github.com/ankushshah89/python-docx2txt
+
+**tqdm**  
+License: Mozilla Public License 2.0  
+Source: https://github.com/tqdm/tqdm
+
+**uvicorn**  
+License: BSD 3-Clause License  
+Source: https://github.com/encode/uvicorn
+
+**pydantic**  
+License: MIT License (v1) / Apache 2.0 (v2)  
+Source: https://github.com/pydantic/pydantic
+
+**requests**  
+License: Apache License 2.0  
+Source: https://github.com/psf/requests
+
+**mistralai/Mistral-7B-Instruct-v0.1**  
+License: Apache License 2.0  
+Source: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1
+
+**BAAI/bge-large-en-v1.5**  
+License: Apache License 2.0  
+Source: https://huggingface.co/BAAI/bge-large-en-v1.5
+
+**intfloat/e5-large-v2**  
+License: Apache License 2.0  
+Source: https://huggingface.co/intfloat/e5-large-v2
+
+---
+
+This software may also use other packages from the Python Package Index (PyPI), subject to their respective licenses.
+
+All open-source licenses are included in the LICENSES/ directory.
+
+This project does not claim ownership over any third-party content listed above.

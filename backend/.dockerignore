@@ -1,0 +1,11 @@
+docs/
+indexes/
+app/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+*.bak
+.venv/
+.git/
