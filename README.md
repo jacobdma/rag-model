@@ -21,11 +21,10 @@ The IHI Assistant is a Retrieval-Augmented Generation (RAG) AI application for i
 ## Features
 
 - Ingests documents from shared drives (`PDF`, `DOCX`, `PPTX`, `TXT`, `CSV`)
-- Hybrid retrieval using **BM25 + FAISS** with chunking strategies
-- Query enrichment via **reformulation + diversification**
+- Hybrid retrieval using **BM25 + FAISS** with small and large chunking strategies
 - Frontend configuration for model, temperature, tone, reranking
 - Optional web search via Bing-compatible API
-- Local inference using `mistralai/Mistral-7B-Instruct-v0.1` and Hugging Face Transformers
+- Local inference using `mistralai/Mistral-7B-Instruct-v0.1`
 - Frontend built with **Next.js**, **Tailwind CSS**, and **Lucide Icons**
 
 ---
@@ -34,11 +33,11 @@ The IHI Assistant is a Retrieval-Augmented Generation (RAG) AI application for i
 
 ### Backend
 
-- `fastapi`, `uvicorn`, `pydantic`
-- `langchain`, `langchain-core`, `langchain-community`, `langchain-huggingface`
-- `transformers`, `torch`, `sentence-transformers`
-- `faiss-cpu`, `tqdm`, `requests`
-- `pdfplumber`, `docx2txt`, `python-pptx`, `pandas`
+- Core: `fastapi`, `uvicorn`, `pydantic`, `pydantic-settings`
+- RAG stack: `langchain`, `langchain-core`, `langchain-community`, `langchain-huggingface`, `langchain-text-splitters`
+- Transformers + embeddings: `transformers`, `torch`, `sentence-transformers`, `faiss-cpu`, `rank-bm25`
+- Parsing: `pdfplumber`, `pypdf`, `docx2txt`, `python-pptx`, `pandas`, `pillow`
+- Utilities: `tqdm`, `requests`, `psutil`, `PyYAML`, `python-dotenv`, `regex`, `scikit-learn`, `scipy`, `sentence-transformers`, `threadpoolctl`
 
 ### Frontend
 
@@ -86,7 +85,6 @@ The assistant supports real-time adjustment of LLM parameters via the floating S
 - Temperature: Control generation creativity
 - LLM Reranking: Toggle slow but more accurate reranking
 - Tone: Choose between formal, neutral, casual
-- Autoscroll: Keep chat view pinned to the latest message
 These are sent via `POST /set-config` to the FastAPI backend.
 
 ## Project Structure
@@ -94,76 +92,32 @@ These are sent via `POST /set-config` to the FastAPI backend.
 ```
 /backend
 ├── app/
+│   ├── chunk_documents.py          # Chunks documents in parallel
 │   ├── config.py                   # Prompt templates & constants
+│   ├── file_readers.py             # File reading functions
+│   ├── hybrid_retrievers.py        # Retrieves content based on hybrid retriever
 │   ├── llm_utils.py                # Model loading and prompt handling
 │   ├── load_utils.py               # Network share and document ingestion
 │   ├── main.py                     # FastAPI app
 │   ├── rag.py                      # Main pipeline logic
-│   ├── retrieve_utils.py           # Retrieval logic with BM25 and FAISS
+│   ├── retriever_builder.py        # Constructs and stores retrievers with persistance
 │   ├── utils.py                    # Document splitting, embedding, reranking
 
 /frontend
 ├── app/
-│   ├── page.tsx                # Main chat page
 │   ├── layout.tsx              # Global layout
+│   ├── page.tsx                # Main chat page
 │   ├──components/
 │   │   ├── chat.tsx                # Message list + chat input
-│   │   └── settings_menu.tsx       # Model controls
+│   │   ├── Dropdown.tsx            # Selection dropdown menu
+│   │   ├── SettingsMenu.tsx        # Model configuration menu
+│   │   └── Sidebar.tsx             # Chat list + new chat
+
 ```
-
-## Licensing & Attribution
-
-This project uses the following third-party libraries, frameworks, models, and fonts. All are compatible with commercial use under open-source licenses.
-
----
-
-### Backend Libraries
-
-| Component                            | License        | Source |
-|-------------------------------------|----------------|--------|
-| `transformers`                      | Apache 2.0     | https://github.com/huggingface/transformers  
-| `torch`                             | BSD 3-Clause   | https://github.com/pytorch/pytorch  
-| `sentence-transformers`             | Apache 2.0     | https://github.com/UKPLab/sentence-transformers  
-| `langchain`, `langchain-core`       | MIT            | https://github.com/langchain-ai/langchain  
-| `langchain-community`, `langchain-huggingface`, `langchain-text-splitters` | MIT | https://github.com/langchain-ai/langchain  
-| `faiss-cpu`                         | MIT            | https://github.com/facebookresearch/faiss  
-| `tqdm`                              | MPL 2.0        | https://github.com/tqdm/tqdm  
-| `requests`                          | Apache 2.0     | https://github.com/psf/requests  
-| `pydantic`                          | MIT / Apache 2.0 | https://github.com/pydantic/pydantic  
-| `uvicorn`                           | BSD 3-Clause   | https://github.com/encode/uvicorn  
-| `pdfplumber`                        | MIT            | https://github.com/jsvine/pdfplumber  
-| `python-pptx`                       | MIT            | https://github.com/scanny/python-pptx  
-| `docx2txt`                          | MIT            | https://github.com/ankushshah89/python-docx2txt  
-| `pandas`                            | BSD 3-Clause   | https://github.com/pandas-dev/pandas  
-
----
-
-### Models Used
-
-| Model Name                           | License        | Source |
-|--------------------------------------|----------------|--------|
-| `mistralai/Mistral-7B-Instruct-v0.1` | Apache 2.0     | https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1  
-| `BAAI/bge-large-en-v1.5`             | Apache 2.0     | https://huggingface.co/BAAI/bge-large-en-v1.5  
-| `intfloat/e5-large-v2`               | Apache 2.0     | https://huggingface.co/intfloat/e5-large-v2  
-| `cross-encoder/ms-marco-MiniLM-L-6-v2` | Apache 2.0   | https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2
-
----
-
-### Frontend Libraries
-
-| Component         | License        | Source |
-|------------------|----------------|--------|
-| `next`           | MIT            | https://github.com/vercel/next.js  
-| `react`          | MIT            | https://github.com/facebook/react  
-| `tailwindcss`    | MIT            | https://github.com/tailwindlabs/tailwindcss  
-| `lucide-react`   | ISC            | https://github.com/lucide-icons/lucide  
-| `Geist` fonts    | Open Font License | https://vercel.com/fonts  
-
----
 
 ## License Copies
 
-All license texts are included in the `LICENSES/` directory. A consolidated list of notices is provided in `NOTICE.txt`.
+A consolidated list of licenses for third-party libraries is provided in `NOTICE.txt`.
 
 > You must preserve these notices and licenses if redistributing this project or using it in a commercial product.
 
