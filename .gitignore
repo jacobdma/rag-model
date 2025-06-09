@@ -45,6 +45,7 @@ backend/docs/
 backend/indexes/
 backend/logs/
 backend/config.yaml
+dev-venv/
 
 # pytorch
 pytorch/
