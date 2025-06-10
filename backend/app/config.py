@@ -10,8 +10,6 @@ with open("config.yaml", "r") as f:
 
 BING_API_KEY, MODEL_TOKEN = config["BING_API_KEY"], config["MODEL_TOKEN"]
 
-MODEL_LITE = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-
 class ModelConfig:
     TONE: str = "Formal"
     # MODEL: str = "gpt2"
@@ -36,32 +34,18 @@ Query:
 Answer:
 """
 
-RERANK_PREFIX = """
-Given the following context chunks, return only those that are relevant to the question.
-
-✅ Only include chunk text.  
-⛔️ Do not return scores, rankings, commentary, or metadata.
-
-Example:
-Question: What is the weight range of the Emperor penguin?
-Chunks:
-1. Emperor penguins typically weigh between 50 and 100 pounds.
-2. The penguin's habitat consists of icy regions in Antarctica.
-3. Macaroni penguins weigh between 8 and 14 pounds.
-
-Relevant:
-1. Emperor penguins typically weigh between 50 and 100 pounds.
-
-Now do the same for the following input.
-"""
-
 RESPONSE_PREFIX = """
 Answer the query using only the context below.
 
 Guidelines:
-- If the context covers multiple topics, focus only on the most relevant and actionable points related to the query.
+- If the context covers multiple topics, focus only on the most relevant and actionable points needed to answer the query.
 - Do not add information not in the context.
-- Respond concisely, in 3 bullet points or less or a short paragraph.
+- Prioritize including all key points from the context that directly answer the query, in order of relevance.
+- Prefer quoting or closely paraphrasing the exact phrasing or structure from the context when possible.
+- Prefer a clearly structured bullet list when answering technical or standards-based questions, unless the query explicitly requests a paragraph.
+- Do not introduce vague or general statements not supported by the context.
+- Do not truncate your response prematurely; complete your answer fully before ending. If answering in bullets, complete the list of key points needed to answer the query.
+- Prioritize content that supports answering the query over background references or definitions.
 - If not found, reply exactly: "I'm not seeing any information in the database."
 - Do not repeat information.
 - If the provided context does not clearly answer the query, state that and do not attempt to generalize.
@@ -79,45 +63,5 @@ Previous Question: {prev_query}
 Previous Answer: {prev_answer}  
 Current Question: {current_query}
 
-Respond with YES or NO only.
-"""
-
-
-REFORMULATION_PROMPT_TEMPLATE = """
-Rewrite the following query to expand acronyms and add technical synonyms, while preserving the exact meaning and intent.
-
-Do not change the core question. Avoid paraphrasing unless necessary for clarity. Respond ONLY with the Rewritten Query
-
-Original Query: {query}
-
-Rewritten Query:
-"""
-
-DIVERSIFY_PROMPT_TEMPLATE = """
-Generate 2 alternative versions of this query that ask for the same information but use different phrasing or terminology.
-
-Do not change what the question is fundamentally asking. Avoid vague or irrelevant rewrites.
-
-Original Query: {query}
-
-Alternative Queries (numbered):
-"""
-
-RETRIEVAL_PROMPT = """
-Estimate how well a keyword-based retriever (like BM25) will perform on the following query, compared to a semantic retriever.
-
-Query: {query}
-
-Use these heuristics:
-- Proper nouns or directive verbs (find, list, who, where) → stronger BM25 performance
-- Abstract/exploratory phrasing (how, why, compare, describe) → stronger semantic performance
-- Short, precise or technical queries → favor BM25
-- Longer, open-ended queries → favor semantic
-
-Respond with a float between 0.0 and 1.0 on its own line.
-0.0 = all BM25; 1.0 = all semantic.
-
-Include only the float in your answer. Do not explain your answer.
-
-Answer:
+Respond ONLY with \"YES\" or \"NO\", no explanations or additional text.
 """

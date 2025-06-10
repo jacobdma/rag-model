@@ -49,28 +49,30 @@ The IHI Assistant is a Retrieval-Augmented Generation (RAG) AI application for i
 
 ## Getting Started
 
-Note: This project is not hosted on a remote Git repository. It is intended for local deployment on internal servers only.
+Note: This project is not hosted online. It is intended for local deployment on internal servers only.
 
 ### 1. Backend
 
 ```
-# Navigate to the backend directory
-cd /rag_model/backend
-
-# Set up virtual environment and install dependencies
+# Set up virtual environment
 python -m venv env
-source env/bin/activate
+env\Scripts\Activate.ps1
+
+# Navigate to the backend directory
+cd rag_model/backend
+
+# Install dependencies
 pip install -r requirements.txt
 
 # Start the FastAPI server
-uvicorn main:app --reload
+uvicorn app.main:app
 
 ```
 
 ### 2. Frontend
 ```
 # Inside the /frontend directory
-cd /rag_model/frontend
+cd rag_model/frontend
 npm install
 npm run dev
 
@@ -100,8 +102,7 @@ These are sent via `POST /set-config` to the FastAPI backend.
 │   ├── load_utils.py               # Network share and document ingestion
 │   ├── main.py                     # FastAPI app
 │   ├── rag.py                      # Main pipeline logic
-│   ├── retriever_builder.py        # Constructs and stores retrievers with persistance
-│   ├── utils.py                    # Document splitting, embedding, reranking
+│   └── retriever_builder.py        # Constructs and stores retrievers with persistance
 
 /frontend
 ├── app/

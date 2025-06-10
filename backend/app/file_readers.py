@@ -10,8 +10,7 @@ import fitz
 import pandas as pd
 from pptx import Presentation
 
-# Local imports
-from .utils import FileType
+FileType = Path | tuple[str, BytesIO]
 
 class FileReader:
     def __init__(self, _supported_exts, _skip_files):

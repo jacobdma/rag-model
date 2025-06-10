@@ -1,16 +1,16 @@
 # Standard library imports
 import os
-import pickle
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Library specific imports
+import dill
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.retrievers import BM25Retriever
 
 # Local imports
-from .utils import RetrievalToolKit
+from .llm_utils import LLMEngine
 from .load_utils import IndexDocumentLoader
 
 class RetrieverBuilder:
@@ -18,7 +18,7 @@ class RetrieverBuilder:
         self.folder_paths = folder_paths
         self.index_dir = os.path.join(os.path.dirname(__file__), "..", "indexes")
         os.makedirs(self.index_dir, exist_ok=True)
-        self.embeddings =  RetrievalToolKit.load_bge_large_fp16()
+        self.embeddings =  LLMEngine.load_bge_large_fp16()
         self.bm25_paths = {
             "small": os.path.join(self.index_dir, "bm25_small.pkl"),
             "large": os.path.join(self.index_dir, "bm25_large.pkl")
@@ -54,12 +54,10 @@ class RetrieverBuilder:
         vectors, texts = self.loader._load_embeddings(granularity, embeddings, docs)
 
         # Create FAISS index
-        print("Building FAISS index...")
         faiss_build_start = time.time()
         text_embeddings = list(zip(texts, vectors))
         faiss_store = FAISS.from_embeddings(text_embeddings, embedding=embeddings)
         print(f"FAISS index built in {time.time() - faiss_build_start:.2f}s")
-        # faiss_store.index = index
         faiss_store.save_local(path)
 
         total_time = time.time() - faiss_start_time
@@ -70,7 +68,7 @@ class RetrieverBuilder:
     def build_bm25(docs, path):
         bm25 = BM25Retriever.from_texts([d.page_content for d in docs])
         with open(path, "wb") as f:
-            pickle.dump(bm25, f)
+            dill.dump(bm25, f)
         return bm25
 
     # Stores retrivers as indexes to cut down load time
@@ -97,7 +95,7 @@ class RetrieverBuilder:
         def bm25_load(path, granularity):
             t0 = time.time()
             with open(path, "rb") as f:
-                result = pickle.load(f)
+                result = dill.load(f)
             print(f"[BM25] Loaded '{granularity}' in {time.time() - t0:.2f}s")
             return ('bm25', granularity, result)
         
@@ -109,7 +107,7 @@ class RetrieverBuilder:
 
         with ThreadPoolExecutor(max_workers=8) as executor:
             all_futures = []
-            
+            t0 = time.time()
             # Submit all BM25 loads
             for g, path in self.bm25_paths.items():
                 future = executor.submit(bm25_load, path, g)
@@ -128,5 +126,5 @@ class RetrieverBuilder:
                     retrievers_bm25[granularity] = data
                 else:  # faiss
                     retrievers_faiss[granularity] = data
-
+            print(f"[DEBUG] Loaded all retrievers in {time.time() - t0:.2f}s")
         return retrievers_bm25, retrievers_faiss

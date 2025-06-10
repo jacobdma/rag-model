@@ -6,15 +6,16 @@ from fastapi.responses import JSONResponse
 # Local imports
 from .rag import RAGPipeline
 from .config import ModelConfig
-from .utils import QueryInput, Configuration
 from .llm_utils import get_llm_engine
+
+from pydantic import BaseModel
 
 # App initialization
 app = FastAPI()
 pipeline = RAGPipeline()
 
-get_llm_engine()._load_model(ModelConfig.MODEL)
 pipeline._get_retrievers()
+get_llm_engine()._load_model(ModelConfig.MODEL)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +24,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Data models
+class Message(BaseModel):
+    role: str
+    content: str
+
+class QueryInput(BaseModel):
+    query: str
+    history: list[Message] = []
+    use_web_search: bool
+
+class Configuration(BaseModel):
+    temperature: float
+    model: str
+    llm_rerank: bool
+    tone: str
 
 # Exception handler for validation errors
 @app.exception_handler(RequestValidationError)
@@ -47,11 +64,9 @@ async def set_config(config: Configuration):
     ModelConfig.TEMPERATURE = config.temperature
     ModelConfig.MODEL = config.model
     ModelConfig.TONE = config.tone
-    ModelConfig.LLM_RERANKING = config.llmRerank
     CURRENT_CONFIG.update({
         "temperature": config.temperature,
         "model": config.model,
-        "tone": config.tone,
-        "llmRerank": config.llmRerank,
+        "tone": config.tone
     })
     return {"message": "Config updated", "config": CURRENT_CONFIG}

@@ -11,14 +11,15 @@ class HybridRetriever:
         seen_content = set()
         unique_chunks = []
         try:
+            t1 = time.time()
             results = hybrid_retriever.invoke(query)
+            print(f"[Pipeline] Invoke took {(time.time() - t1):.2f} seconds")
             for doc in results:
                 content = doc.page_content
                 if not self._filter_chunk(content):
                     continue
-                content_hash = hash(content)
-                if content_hash not in seen_content:
-                    seen_content.add(content_hash)
+                if content not in seen_content:
+                    seen_content.add(content)
                     unique_chunks.append(content)
         except Exception as e:
             print(f"[Retrieval] Query failed: {e}")

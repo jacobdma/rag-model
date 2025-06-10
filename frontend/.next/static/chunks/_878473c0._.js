@@ -424,7 +424,7 @@ function SettingsMenu() {
             const config = {
                 temperature,
                 model,
-                llmRerank,
+                llm_rerank: llmRerank,
                 tone
             };
             fetch("http://localhost:8000/set-config", {
@@ -466,7 +466,7 @@ function SettingsMenu() {
             const config = {
                 temperature,
                 model,
-                llmRerank,
+                llm_rerank: llmRerank,
                 tone
             };
             fetch("http://localhost:8000/set-config", {

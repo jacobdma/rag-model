@@ -45,7 +45,7 @@ useEffect(() => {
 
   // ✅ Sync config
   useEffect(() => {
-    const config = { temperature, model, llmRerank, tone }
+    const config = { temperature, model, llm_rerank: llmRerank, tone }
     fetch("http://localhost:8000/set-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,11 +64,11 @@ const modelOptions = [
 ]
 
   useEffect(() => {
-    const config = { temperature, model, llmRerank, tone }
+    const config = { temperature, model, llm_rerank: llmRerank, tone }
     fetch("http://localhost:8000/set-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
     })
     }, [temperature, model, llmRerank, tone])
 

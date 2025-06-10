@@ -2,7 +2,6 @@
 
 # Standard library imports
 import time
-import re
 import yaml
 
 # Third-party imports
@@ -11,15 +10,19 @@ import torch
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pydantic import BaseModel
 
 # Local imports
+from .chunk_documents import DocumentChunker
 from .llm_utils import get_llm_engine
-from .utils import RetrievalToolKit, Message
 from .hybrid_retriever import HybridRetriever
 from .retriever_builder import RetrieverBuilder
 from . import config
 from .config import ModelConfig
+
+class Message(BaseModel):
+    role: str
+    content: str
 
 class RAGPipeline:
     def __init__(self):
@@ -27,9 +30,7 @@ class RAGPipeline:
         self._cached_vector = None
         engine = get_llm_engine()
         self._prompt = engine.prompt
-        self._prompt_lite = engine.prompt_lite
         self._hybrid_retriever = HybridRetriever()
-        self._toolkit = RetrievalToolKit()
 
     def _get_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS]]:
         if self._cached_bm25 is None or self._cached_vector is None:
@@ -57,15 +58,16 @@ class RAGPipeline:
         
         for i in range(len(chat_history) - 2, -1, -2):
             if chat_history[i].role == "user" and chat_history[i + 1].role == "assistant":
-                relevance = self._prompt_lite(
-                    question=config.HISTORY_PROMPT_TEMPLATE.format(
+                relevance = self._prompt(
+                    prompt=config.HISTORY_PROMPT_TEMPLATE.format(
                         prev_query=chat_history[i].content,
                         prev_answer=chat_history[i + 1].content,
                         current_query=query
                     ),
-                    prefix=""
+                    max_new_tokens=32
                 )
                 print(f"History Relevance Response: {relevance}")
+
                 if "yes" in relevance.lower():
                     history_chain.insert(0, chat_history[i].model_dump())
                     history_chain.insert(1, chat_history[i + 1].model_dump())
@@ -76,28 +78,6 @@ class RAGPipeline:
         self._log_time(t0, "[Pipeline] History relevance chain built")
 
         return history_chain, chat_history
-    
-    @staticmethod
-    def clean_paragraphs(docs: list[str], min_length: int = 50) -> list[str]:
-        t0 = time.time()
-        cleaned_chunks = []
-
-        splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64)
-
-        for doc in docs:
-            split_chunks = splitter.split_text(doc)
-            print(f"[Clean Paragraphs] Split from {len(docs)} to {len(split_chunks)}")
-            for chunk in split_chunks:
-                chunk = re.sub(r"\b\d{1,2}:\d{2}(:\d{2})?\b", "", chunk)  # timestamps
-                chunk = re.sub(r"[A-Z]{2,}\s?[0-9]{3,}", "", chunk)      # serial-like
-                chunk = re.sub(r"[^A-Za-z0-9.,;:(){}\[\]\-+/=_% ]+", " ", chunk)  # remove symbols
-                chunk = re.sub(r"\s+", " ", chunk).strip()               # collapse whitespace
-
-                if len(chunk) >= min_length:
-                    cleaned_chunks.append(chunk)
-
-        print(f"[CLEANING] Cleaning text took {(time.time() - t0):.2f} s")
-        return cleaned_chunks
 
     def _prompt_final_response(self, combined_context: str, web_context: str, query: str,
         history_chain: list[dict[str, str]], chat_history: list[Message]) -> str:
@@ -141,18 +121,11 @@ class RAGPipeline:
         # Create keyword retriever and vector store
         t0 = time.time()
         bm25_retriever, vector_store = self._get_retrievers()
-        self._log_time(t0, "[Pipeline] BM25 and FAISS retrievers setup in")
-        t0 = time.time()
+
         hybrid_retriever = EnsembleRetriever(
-            retrievers=[
-                bm25_retriever["small"],
-                bm25_retriever["large"],
-                vector_store["small"].as_retriever(),
-                vector_store["large"].as_retriever(),
-            ],
+            retrievers=[bm25_retriever["small"], bm25_retriever["large"], vector_store["small"].as_retriever(), vector_store["large"].as_retriever()],
             weights=[0.35, 0.15, 0.25, 0.25]
         )
-        self._log_time(t0, "[Pipeline] Hybid retriever created in")
 
         try:
             web_results = None
@@ -161,15 +134,14 @@ class RAGPipeline:
                 t0 = time.time()
                 web_results = self._search_bing(query)
                 web_results = "\n\n".join(web_results)
-                print(web_results)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
             # Builds history chain based on chat history and current query
             history_chain, chat_history = self._build_history_chain(chat_history, query)
-
+            
             # Retrieves and filters context
-            results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=1)
-            results = self.clean_paragraphs(results, min_length=50)
+            results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
+            results = DocumentChunker().clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
             
             # Prompts the LLM for the final response
             torch.cuda.empty_cache()

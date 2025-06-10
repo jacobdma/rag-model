@@ -1,6 +1,8 @@
 # Standard library imports
 import json
 import os
+import re
+import time
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 
@@ -9,9 +11,11 @@ from tqdm import tqdm
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-class DocumentChunker:    
-    def _chunk_one(self, args) -> Document:
-        filename, text, chunk_size, chunk_overlap = args
+class DocumentChunker:
+    def clean_paragraphs(self, docs: list[str], chunk_size: int, chunk_overlap: int, min_length: int = 50) -> list[str]:
+        t0 = time.time()
+        cleaned_chunks = []
+
         if not hasattr(self, "_splitter_cache"):
             self._splitter_cache = {}
         splitter_key = (chunk_size, chunk_overlap)
@@ -19,7 +23,28 @@ class DocumentChunker:
             self._splitter_cache[splitter_key] = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
         splitter = self._splitter_cache[splitter_key]
 
-        chunks = splitter.split_text(text)
+        for doc in docs:
+            split_chunks = splitter.split_text(doc)
+            doc = re.sub(r"\s+", " ", doc).strip()
+            for chunk in split_chunks:
+                chunk = re.sub(r"\b\d{1,2}:\d{2}(:\d{2})?\b", "", chunk)  # timestamps
+                chunk = re.sub(r"[A-Z]{2,}\s?[0-9]{3,}", "", chunk)      # serial-like
+                chunk = re.sub(r"[^A-Za-z0-9.,;:(){}\[\]\-+/=_% ]+", " ", chunk)  # remove symbols
+                chunk = re.sub(r"\s+", " ", chunk).strip()               # collapse whitespace
+
+                if len(chunk) == 0 or (sum(c.isdigit() for c in chunk) / len(chunk)) > 0.5: # filters logs, heavy tables
+                    continue
+                if len(chunk) >= min_length:
+                    cleaned_chunks.append(chunk)
+
+                unique_tokens = set(chunk.split())
+                if len(unique_tokens) < 5:  # tune this — 5 is a good start
+                    continue
+        return cleaned_chunks
+
+    def _chunk_one(self, args) -> Document:
+        filename, text, chunk_size, chunk_overlap = args
+        chunks = self.clean_paragraphs([text], chunk_size, chunk_overlap, min_length=chunk_size // 10)  # optional: you can tune min_length
         return [
             Document(
                 page_content=chunk,

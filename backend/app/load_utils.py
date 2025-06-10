@@ -3,19 +3,21 @@ import collections
 import logging
 import json
 import os
-import pickle
+import dill
 import yaml
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 # Third-party imports
 from tqdm import tqdm
+from io import BytesIO
 from langchain_core.documents import Document
 
 # Local imports
 from .file_readers import FileReader
 from .chunk_documents import DocumentChunker
-from .utils import FileType
+
+FileType = Path | tuple[str, BytesIO]
 
 class DocumentLoader:
     def __init__(self):
@@ -121,7 +123,7 @@ class IndexDocumentLoader:
 
         if not loaded_chunked_docs:
             raw_docs = self._get_docs()
-            docs = DocumentChunker._chunk_documents(raw_docs, granularity, chunk_size, chunk_overlap)
+            docs = DocumentChunker()._chunk_documents(raw_docs, granularity, chunk_size, chunk_overlap)
         
         return docs
     
@@ -142,7 +144,7 @@ class IndexDocumentLoader:
         if os.path.exists(f"docs/faiss_cache_{granularity}.pkl"):
             print("[CACHE] Loading FAISS vectors from cache...")
             with open(f"docs/faiss_cache_{granularity}.pkl", "rb") as f:
-                cache = pickle.load(f)
+                cache = dill.load(f)
             vectors = cache["vectors"]
             texts = cache["texts"]
         else:
@@ -170,10 +172,6 @@ class IndexDocumentLoader:
             # Reconstruct full list of vectors in original order
             vectors = [encoded[t] for t in texts]
             with open(f"docs/faiss_cache_{granularity}.pkl", "wb") as f:
-                pickle.dump({
-                    "vectors": vectors,
-                    "texts": list(set(texts)),
-                    "metadatas": None
-                }, f, protocol=pickle.HIGHEST_PROTOCOL)
+                dill.dump({"vectors": vectors, "texts": list(set(texts)), "metadatas": None}, f, protocol=dill.HIGHEST_PROTOCOL)
 
         return vectors, texts
