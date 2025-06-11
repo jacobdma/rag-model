@@ -144,23 +144,6 @@ const modelOptions = [
                 }
             `}</style>
           </div>
-
-          {/* LLM Rerank Toggle (Modern Switch) */}
-            <div className="flex justify-between items-center">
-            <label className="px-3 text-sm font-medium text-neutral-800 dark:text-neutral-200">
-                LLM Reranking (Slower)
-            </label>
-            <button
-                onClick={() => setLlmRerank(!llmRerank)}
-                className={`w-12 h-7 flex items-center rounded-full
-                ${llmRerank ? "bg-green-500 hover:bg-green-600" : "hover:bg-neutral-200 hover:dark:bg-neutral-700 bg-neutral-100 dark:bg-neutral-800"}`}
-            >
-              <div
-              className={`w-6 h-6 bg-white rounded-full transition-transform duration-300 ease-in-out
-                  ${llmRerank ? "translate-x-5.5" : "translate-x-0.5"}`}
-              />
-            </button>
-            </div>
         </div>
       )}
     </div>

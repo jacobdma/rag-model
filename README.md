@@ -53,19 +53,27 @@ Note: This project is not hosted online. It is intended for local deployment on 
 
 ### 1. Backend
 
+_Requires Python 3.11_
+
 ```
+# Navigate to the project directory
+cd rag_model
+
 # Set up virtual environment
 python -m venv env
-env\Scripts\Activate.ps1
+env\Scripts\activate.ps1
 
 # Navigate to the backend directory
-cd rag_model/backend
+cd backend
+
+# Upgrade pip
+python -m pip install --upgrade pip
 
 # Install dependencies
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # Start the FastAPI server
-uvicorn app.main:app
+uvicorn scripts.main:app
 
 ```
 
@@ -93,7 +101,7 @@ These are sent via `POST /set-config` to the FastAPI backend.
 
 ```
 /backend
-├── app/
+├── scripts/
 │   ├── chunk_documents.py          # Chunks documents in parallel
 │   ├── config.py                   # Prompt templates & constants
 │   ├── file_readers.py             # File reading functions

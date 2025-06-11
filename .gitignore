@@ -40,17 +40,19 @@ yarn-error.log*
 next-env.d.ts
 
 # local config files files
-backend/docs/
+backend/__pycache__/
+backend/scripts/__pycache__/
+backend/cache/
 backend/indexes/
 backend/logs/
 backend/config.yaml
-dev-venv/
+env/
 
 # pytorch
 pytorch/
 
 # frontend
 frontend/node_modules/
-frontend/.next
+frontend/.next/
 frontend/out
 frontend/build

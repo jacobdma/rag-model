@@ -564,40 +564,6 @@ function SettingsMenu() {
                         fileName: "[project]/app/components/SettingsMenu.tsx",
                         lineNumber: 107,
                         columnNumber: 11
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex justify-between items-center",
-                        children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                className: "px-3 text-sm font-medium text-neutral-800 dark:text-neutral-200",
-                                children: "LLM Reranking (Slower)"
-                            }, void 0, false, {
-                                fileName: "[project]/app/components/SettingsMenu.tsx",
-                                lineNumber: 150,
-                                columnNumber: 13
-                            }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                onClick: ()=>setLlmRerank(!llmRerank),
-                                className: `w-12 h-7 flex items-center rounded-full
-                ${llmRerank ? "bg-green-500 hover:bg-green-600" : "hover:bg-neutral-200 hover:dark:bg-neutral-700 bg-neutral-100 dark:bg-neutral-800"}`,
-                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: `w-6 h-6 bg-white rounded-full transition-transform duration-300 ease-in-out
-                  ${llmRerank ? "translate-x-5.5" : "translate-x-0.5"}`
-                                }, void 0, false, {
-                                    fileName: "[project]/app/components/SettingsMenu.tsx",
-                                    lineNumber: 158,
-                                    columnNumber: 15
-                                }, this)
-                            }, void 0, false, {
-                                fileName: "[project]/app/components/SettingsMenu.tsx",
-                                lineNumber: 153,
-                                columnNumber: 13
-                            }, this)
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/app/components/SettingsMenu.tsx",
-                        lineNumber: 149,
-                        columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
