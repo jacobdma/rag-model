@@ -31,13 +31,13 @@ class RAGPipeline:
         engine = get_llm_engine()
         self._prompt = engine.prompt
         self._hybrid_retriever = HybridRetriever()
+        with open("config.yaml", "r") as f:
+            config = yaml.safe_load(f)
+        self.folder_paths = config["DOCUMENTS"]
 
     def _get_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS]]:
         if self._cached_bm25 is None or self._cached_vector is None:
-            with open("config.yaml", "r") as f:
-                config = yaml.safe_load(f)
-            folder_paths = config["DOCUMENTS"]
-            self._cached_bm25, self._cached_vector = RetrieverBuilder(folder_paths).build_retrievers()
+            self._cached_bm25, self._cached_vector = RetrieverBuilder(self.folder_paths).build_retrievers()
         return self._cached_bm25, self._cached_vector
 
     def _search_bing(self, query: str, max_results: int = 5) -> list[str]:
@@ -141,7 +141,7 @@ class RAGPipeline:
             
             # Retrieves and filters context
             results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
-            results = DocumentChunker().clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
+            results = DocumentChunker(self.folder_paths).clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
             
             # Prompts the LLM for the final response
             torch.cuda.empty_cache()

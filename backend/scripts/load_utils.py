@@ -11,19 +11,31 @@ from pathlib import Path
 # Third-party imports
 from tqdm import tqdm
 from io import BytesIO
-from langchain_core.documents import Document
 
 # Local imports
 from .file_readers import FileReader
-from .chunk_documents import DocumentChunker
 
 FileType = Path | tuple[str, BytesIO]
+
+def get_cache_dir():
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "__init__.py").exists():
+            ROOT_DIR = parent
+            break
+    else:
+        raise RuntimeError("Could not find project root (missing __init__.py)")
+    CACHE_DIR = Path(os.getenv("CACHE_DIR", ROOT_DIR / "cache"))
+    LOG_DIR = ROOT_DIR / "logs"
+    INDEX_DIR = ROOT_DIR / "indexes"
+    return CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR
+
+CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR = get_cache_dir()
 
 class DocumentLoader:
     def __init__(self):
         with open("config.yaml", "r") as f:
             config = yaml.safe_load(f)
-
         self._RAW_IGNORE_FOLDERS = config["IGNORE_FOLDERS"]
         self._IGNORE_FOLDERS = {f.lower() for f in self._RAW_IGNORE_FOLDERS}
         self._IGNORE_KEYWORDS = set(config["IGNORE_KEYWORDS"])
@@ -43,7 +55,7 @@ class DocumentLoader:
         return skip_files
 
     # Gathers all file paths from a folder path
-    def _gather_supported_files(self, folder_path: str) -> list[Path]:
+    def gather_supported_files(self, folder_path: str) -> list[Path]:
         file_paths = []
 
         for root, dirs, files in os.walk(folder_path):
@@ -86,7 +98,7 @@ class DocumentLoader:
         for ext in load_times:
             print(f"[Loader] {ext}: {load_counts[ext]} files loaded in {load_times[ext]:.2f} seconds")
         print(f"[DEBUG] ← Total successfully loaded documents: {len(text_docs)}")
-        cache_path = Path("docs/parsed_text_docs.json")
+        cache_path = CACHE_DIR / "parsed_text_docs.json"
         cache_path.parent.mkdir(exist_ok=True)
 
         try:
@@ -95,55 +107,13 @@ class DocumentLoader:
         except Exception as e:
             print(f"[WARN] Failed to cache parsed docs: {e}")
         return text_docs # Returns a list of file names and extracted text as List[Tuple(str, str)]
-
-    # Loads folders
-    def load_folders(self, folder_paths: list[str]) -> list[tuple[str, str]]:
-        all_files = []
-        for folder in folder_paths:
-            all_files.extend(self._gather_supported_files(folder))
-
-        print(f"[DEBUG] Found {len(all_files)} total files to parse.")
-        return self.convert_files_to_text(all_files, verbose_label="all folders")
-
-class IndexDocumentLoader:
-    def __init__(self, folder_paths: list[str]):
-        self.folder_paths = folder_paths
-
-    def _get_chunks(self, granularity: int, chunk_size: int, chunk_overlap: int):
-        chunked_cache_path = Path(f"docs/chunked_docs_{granularity}.json")
-        loaded_chunked_docs = False
-        if chunked_cache_path.exists():
-            print(f"[CACHE] Loaded chunked documents from {chunked_cache_path}")
-            try:
-                with open(chunked_cache_path, "r", encoding="utf-8") as f:
-                    docs = [Document(page_content=d["page_content"], metadata=d["metadata"]) for d in json.load(f)]
-                loaded_chunked_docs = True
-            except:
-                print(f"[ERROR] Chunked docs could not be loaded. Re-chunking...")
-
-        if not loaded_chunked_docs:
-            raw_docs = self._get_docs()
-            docs = DocumentChunker()._chunk_documents(raw_docs, granularity, chunk_size, chunk_overlap)
-        
-        return docs
     
-    def _get_docs(self):
-        parsed_cache_path = Path("docs/parsed_text_docs.json")
-        if parsed_cache_path.exists():
-            print(f"[CACHE] Loaded pre-parsed documents from {parsed_cache_path}")
-            with open(parsed_cache_path, "r", encoding="utf-8") as f:
-                raw_documents = [(entry["filename"], entry["text"]) for entry in json.load(f)]
-        else:
-            raw_documents = DocumentLoader().load_folders(self.folder_paths)
-        if not raw_documents:
-            raise ValueError("No documents were loaded. Cannot create indexes.")
-        return raw_documents
-
     @staticmethod
     def _load_embeddings(granularity: str, embeddings, docs):
-        if os.path.exists(f"docs/faiss_cache_{granularity}.pkl"):
+        faiss_cache_path = CACHE_DIR / f"faiss_cache_{granularity}.pkl"
+        if faiss_cache_path.exists():
             print("[CACHE] Loading FAISS vectors from cache...")
-            with open(f"docs/faiss_cache_{granularity}.pkl", "rb") as f:
+            with open(faiss_cache_path, "rb") as f:
                 cache = dill.load(f)
             vectors = cache["vectors"]
             texts = cache["texts"]
@@ -171,7 +141,8 @@ class IndexDocumentLoader:
 
             # Reconstruct full list of vectors in original order
             vectors = [encoded[t] for t in texts]
-            with open(f"docs/faiss_cache_{granularity}.pkl", "wb") as f:
+            
+            with open(faiss_cache_path, "wb") as f:
                 dill.dump({"vectors": vectors, "texts": list(set(texts)), "metadatas": None}, f, protocol=dill.HIGHEST_PROTOCOL)
 
         return vectors, texts

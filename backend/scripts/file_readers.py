@@ -19,7 +19,8 @@ class FileReader:
 
     @staticmethod
     def _log_problem(reason, filename, duration=None, notes=""):
-        log_path = Path("logs/problem_files.tsv")
+        script_dir = Path(__file__).resolve().parent
+        log_path = script_dir / "logs" / "problem_files.tsv"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         duration_str = f"{duration:.2f}" if duration else ""
         with open(log_path, "a", encoding="utf-8") as log_file:

@@ -10,8 +10,9 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.retrievers import BM25Retriever
 
 # Local imports
+from .chunk_documents import DocumentChunker
 from .llm_utils import LLMEngine
-from .load_utils import IndexDocumentLoader
+from .load_utils import DocumentLoader
 
 class RetrieverBuilder:
     def __init__(self, folder_paths: list[str]):
@@ -27,7 +28,8 @@ class RetrieverBuilder:
             "small": os.path.join(self.index_dir, "faiss_small"),
             "large": os.path.join(self.index_dir, "faiss_large")
         }
-        self.loader = IndexDocumentLoader(self.folder_paths)
+        self.loader = DocumentLoader()
+        self.chunker = DocumentChunker(self.folder_paths)
 
     def _log_faiss_elapsed(self, start_time, stop_flag):
         while not stop_flag.wait(30):
@@ -79,7 +81,7 @@ class RetrieverBuilder:
 
         if missing_bm25 or missing_faiss:
             for granularity, (chunk_size, chunk_overlap) in {"small": (512, 50), "large": (4096, 400)}.items():
-                docs = self.loader._get_chunks(granularity, chunk_size, chunk_overlap)
+                docs = self.chunker._get_chunks(granularity, chunk_size, chunk_overlap)
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     futures = []
                     if granularity in missing_bm25:
