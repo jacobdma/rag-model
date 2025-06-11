@@ -72,9 +72,11 @@ python -m pip install --upgrade pip
 # Install dependencies
 python -m pip install -r requirements.txt
 
-# Start the FastAPI server
+# Start the FastAPI server for local use
 uvicorn scripts.main:app
 
+# Start the FastAPI server for development
+uvicorn scripts.main:app --reload
 ```
 
 ### 2. Frontend

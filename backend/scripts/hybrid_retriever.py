@@ -1,6 +1,7 @@
 # Standard library imports
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Third-party imports
 from langchain.retrievers import EnsembleRetriever
@@ -11,10 +12,36 @@ class HybridRetriever:
         seen_content = set()
         unique_chunks = []
         try:
-            t1 = time.time()
-            results = hybrid_retriever.invoke(query)
-            print(f"[Pipeline] Invoke took {(time.time() - t1):.2f} seconds")
-            for doc in results:
+            # Parallelize each retriever in the ensemble
+            retrievers = hybrid_retriever.retrievers
+            weights = getattr(hybrid_retriever, "weights", [1] * len(retrievers))
+
+            def run_retriever(retriever):
+                try:
+                    return retriever.invoke(query)
+                except Exception as e:
+                    print(f"[Retrieval] Sub-retriever failed: {e}")
+                    traceback.print_exc()
+                    return []
+
+            results = []
+            with ThreadPoolExecutor() as executor:
+                future_to_idx = {executor.submit(run_retriever, retriever): i for i, retriever in enumerate(retrievers)}
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    try:
+                        docs = future.result()
+                        results.append((docs, weights[idx]))
+                    except Exception as e:
+                        print(f"[Pipeline] Retriever {idx} failed: {e}")
+
+            # Flatten and merge results, respecting weights (optional: you can implement weighted merging)
+            flat_results = []
+            for docs, weight in results:
+                flat_results.extend(docs)
+
+            print(f"[Pipeline] Parallel invoke took {(time.time() - t0):.2f} seconds")
+            for doc in flat_results:
                 content = doc.page_content
                 if not self._filter_chunk(content):
                     continue

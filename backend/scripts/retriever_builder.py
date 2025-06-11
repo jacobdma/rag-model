@@ -1,4 +1,7 @@
 # Standard library imports
+import numpy as np
+import msgpack
+import msgpack_numpy
 import os
 import sys
 import time
@@ -21,15 +24,18 @@ class RetrieverBuilder:
         os.makedirs(self.index_dir, exist_ok=True)
         self.embeddings =  LLMEngine.load_bge_large_fp16()
         self.bm25_paths = {
-            "small": os.path.join(self.index_dir, "bm25_small.pkl"),
-            "large": os.path.join(self.index_dir, "bm25_large.pkl")
+            "small": os.path.join(self.index_dir, "bm25_small.dill"),
+            "medium": os.path.join(self.index_dir, "bm25_medium.dill"),
+            "large": os.path.join(self.index_dir, "bm25_large.dill")
         }
         self.faiss_paths = {
             "small": os.path.join(self.index_dir, "faiss_small"),
+            "medium": os.path.join(self.index_dir, "faiss_medium"),
             "large": os.path.join(self.index_dir, "faiss_large")
         }
         self.loader = DocumentLoader()
         self.chunker = DocumentChunker(self.folder_paths)
+        msgpack_numpy.patch() # Register msgpack with numpy support
 
     def _log_faiss_elapsed(self, start_time, stop_flag):
         while not stop_flag.wait(30):
@@ -68,7 +74,7 @@ class RetrieverBuilder:
     
     @staticmethod
     def build_bm25(docs, path):
-        bm25 = BM25Retriever.from_texts([d.page_content for d in docs])
+        bm25 = BM25Retriever.from_texts(docs)
         with open(path, "wb") as f:
             dill.dump(bm25, f)
         return bm25
@@ -80,7 +86,7 @@ class RetrieverBuilder:
         t0 = time.time()
 
         if missing_bm25 or missing_faiss:
-            for granularity, (chunk_size, chunk_overlap) in {"small": (512, 50), "large": (4096, 400)}.items():
+            for granularity, (chunk_size, chunk_overlap) in {"small": (512, 50), "medium": (1024, 100), "large": (2048, 200)}.items():
                 docs = self.chunker._get_chunks(granularity, chunk_size, chunk_overlap)
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     futures = []

@@ -54,7 +54,9 @@ langsmith - MIT - https://smith.langchain.com/
 lxml - BSD 3-Clause - https://lxml.de/  
 MarkupSafe - BSD 3-Clause - https://github.com/pallets/markupsafe  
 marshmallow - MIT - https://github.com/marshmallow-code/marshmallow  
-mpmath - BSD - http://mpmath.org/  
+mpmath - BSD - http://mpmath.org/
+msgpack - Apache 2.0 - https://msgpack.org/
+msgpack-numpy - BSD - https://github.com/lebedov/msgpack-numpy
 multidict - Apache 2 - https://github.com/aio-libs/multidict  
 mypy_extensions - MIT - https://github.com/python/mypy_extensions  
 networkx - BSD 3-Clause - https://networkx.org/  

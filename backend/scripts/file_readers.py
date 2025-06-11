@@ -26,7 +26,7 @@ class FileReader:
         with open(log_path, "a", encoding="utf-8") as log_file:
             log_file.write(f"{reason}\t{filename}\t{duration_str}\t{notes}\n")
 
-    def read_file(self, file: FileType) -> tuple[str, str, str, float] | None:
+    def read_file(self, file: FileType) -> str | None:
         if isinstance(file, Path):
             filename = str(file)
             ext = file.suffix.lower()
@@ -39,11 +39,9 @@ class FileReader:
         if filename in self._skip_files or ext not in self._supported_exts:
             return None
         
-        t0 = time.time()
         with open_file() as f:
             text = self.read_docs(f, filename, ext)
-        elapsed = time.time() - t0
-        return (filename, text, ext, elapsed) if text else None
+        return text if text else None
         
     def read_docs(self, f, filename, ext):
         readers = {

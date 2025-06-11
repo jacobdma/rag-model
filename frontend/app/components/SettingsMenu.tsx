@@ -5,19 +5,18 @@ import Dropdown from "@/components/Dropdown"
 
 export default function SettingsMenu() {
   const [isOpen, setIsOpen] = useState(false)
-  const [temperature, setTemperature] = useState(0.64516)
+  const [temperature, setTemperature] = useState(0.00645)
   const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
-  const [llmRerank, setLlmRerank] = useState(true)
   const [tone, setTone] = useState("neutral")
   const menuRef = useRef<HTMLDivElement>(null)
 
 const temperatureStops = [
-  { value: 0.1129, label: "Precise" },
-  { value: 0.29032, label: "Focused" },
-  { value: 0.46774, label: "Balanced" },
-  { value: 0.64516, label: "Conversational" },
-  { value: 0.82258, label: "Imaginative" },
-  { value: 1.0, label: "Unpredictable" }
+  { value: 0.00645, label: "Precise" },
+  { value: 0.09516, label: "Technical" },
+  { value: 0.18387, label: "Focused" },
+  { value: 0.27258, label: "Balanced" },
+  { value: 0.36129, label: "Flexible" },
+  { value: 0.45, label: "Creative" }
 ]
 
 function getTemperatureLabel(value: number): string {
@@ -45,13 +44,13 @@ useEffect(() => {
 
   // ✅ Sync config
   useEffect(() => {
-    const config = { temperature, model, llm_rerank: llmRerank, tone }
+    const config = { temperature, model, tone }
     fetch("http://localhost:8000/set-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
     })
-  }, [temperature, model, llmRerank, tone])
+  }, [temperature, model, tone])
 
 const toneOptions = [
   { label: "Formal", value: "formal" },
@@ -64,13 +63,13 @@ const modelOptions = [
 ]
 
   useEffect(() => {
-    const config = { temperature, model, llm_rerank: llmRerank, tone }
+    const config = { temperature, model, tone }
     fetch("http://localhost:8000/set-config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
     })
-    }, [temperature, model, llmRerank, tone])
+    }, [temperature, model, tone])
 
   return (
     <div className="absolute top-3 right-3">
@@ -104,7 +103,7 @@ const modelOptions = [
             />
 
           {/* Temperature Slider */}
-          <div className="mb-7">
+          <div className="mb-1">
             <div className="px-3 pb-3 text-sm font-medium flex justify-between">
                 <label className="block text-neutral-800 dark:text-neutral-200">
                     Response Style
@@ -115,15 +114,15 @@ const modelOptions = [
             <div className="relative w-full h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 hover:dark:bg-neutral-700">
                 <div
                 className="absolute h-7 rounded-full bg-green-500"
-                style={{ width: `${temperature * 100}%` }}
+                style={{ width: `${(temperature + 0.05) * 200}%` }}
                 />
 
                 {/* Transparent slider overlaid */}
                 <input
                 type="range"
-                min="0.1129"
-                max="1"
-                step="0.17742"
+                min="0.00645"
+                max="0.45"
+                step="0.08871"
                 value={temperature}
                 onChange={(e) => setTemperature(parseFloat(e.target.value))}
                 className="absolute top-0 left-0 w-full h-3 opacity-0 cursor-pointer"

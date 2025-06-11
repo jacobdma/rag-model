@@ -334,35 +334,34 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$components$2f$Dropdow
 ;
 function SettingsMenu() {
     const [isOpen, setIsOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [temperature, setTemperature] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(0.64516);
+    const [temperature, setTemperature] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(0.00645);
     const [model, setModel] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("mistralai/Mistral-7B-Instruct-v0.1");
-    const [llmRerank, setLlmRerank] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
     const [tone, setTone] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("neutral");
     const menuRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const temperatureStops = [
         {
-            value: 0.1129,
+            value: 0.00645,
             label: "Precise"
         },
         {
-            value: 0.29032,
+            value: 0.09516,
+            label: "Technical"
+        },
+        {
+            value: 0.18387,
             label: "Focused"
         },
         {
-            value: 0.46774,
+            value: 0.27258,
             label: "Balanced"
         },
         {
-            value: 0.64516,
-            label: "Conversational"
+            value: 0.36129,
+            label: "Flexible"
         },
         {
-            value: 0.82258,
-            label: "Imaginative"
-        },
-        {
-            value: 1.0,
-            label: "Unpredictable"
+            value: 0.45,
+            label: "Creative"
         }
     ];
     function getTemperatureLabel(value) {
@@ -391,7 +390,6 @@ function SettingsMenu() {
         const config = {
             temperature,
             model,
-            llm_rerank: llmRerank,
             tone
         };
         fetch("http://localhost:8000/set-config", {
@@ -404,7 +402,6 @@ function SettingsMenu() {
     }, [
         temperature,
         model,
-        llmRerank,
         tone
     ]);
     const toneOptions = [
@@ -431,7 +428,6 @@ function SettingsMenu() {
         const config = {
             temperature,
             model,
-            llm_rerank: llmRerank,
             tone
         };
         fetch("http://localhost:8000/set-config", {
@@ -444,7 +440,6 @@ function SettingsMenu() {
     }, [
         temperature,
         model,
-        llmRerank,
         tone
     ]);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -459,17 +454,17 @@ function SettingsMenu() {
                         size: 20
                     }, void 0, false, {
                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                        lineNumber: 84,
+                        lineNumber: 83,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/app/components/SettingsMenu.tsx",
-                    lineNumber: 78,
+                    lineNumber: 77,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/app/components/SettingsMenu.tsx",
-                lineNumber: 77,
+                lineNumber: 76,
                 columnNumber: 7
             }, this),
             isOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -482,7 +477,7 @@ function SettingsMenu() {
                         onChange: setTone
                     }, void 0, false, {
                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                        lineNumber: 91,
+                        lineNumber: 90,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$components$2f$Dropdown$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -492,11 +487,11 @@ function SettingsMenu() {
                         onChange: setModel
                     }, void 0, false, {
                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                        lineNumber: 99,
+                        lineNumber: 98,
                         columnNumber: 13
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "jsx-7918e58248681bc1" + " " + "mb-7",
+                        className: "jsx-7918e58248681bc1" + " " + "mb-1",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "jsx-7918e58248681bc1" + " " + "px-3 pb-3 text-sm font-medium flex justify-between",
@@ -506,7 +501,7 @@ function SettingsMenu() {
                                         children: "Response Style"
                                     }, void 0, false, {
                                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                                        lineNumber: 109,
+                                        lineNumber: 108,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -514,13 +509,13 @@ function SettingsMenu() {
                                         children: getTemperatureLabel(temperature)
                                     }, void 0, false, {
                                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                                        lineNumber: 112,
+                                        lineNumber: 111,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/components/SettingsMenu.tsx",
-                                lineNumber: 108,
+                                lineNumber: 107,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -528,31 +523,31 @@ function SettingsMenu() {
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         style: {
-                                            width: `${temperature * 100}%`
+                                            width: `${(temperature + 0.05) * 200}%`
                                         },
                                         className: "jsx-7918e58248681bc1" + " " + "absolute h-7 rounded-full bg-green-500"
                                     }, void 0, false, {
                                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                                        lineNumber: 116,
+                                        lineNumber: 115,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                         type: "range",
-                                        min: "0.1129",
-                                        max: "1",
-                                        step: "0.17742",
+                                        min: "0.00645",
+                                        max: "0.45",
+                                        step: "0.08871",
                                         value: temperature,
                                         onChange: (e)=>setTemperature(parseFloat(e.target.value)),
                                         className: "jsx-7918e58248681bc1" + " " + "absolute top-0 left-0 w-full h-3 opacity-0 cursor-pointer"
                                     }, void 0, false, {
                                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                                        lineNumber: 122,
+                                        lineNumber: 121,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/app/components/SettingsMenu.tsx",
-                                lineNumber: 115,
+                                lineNumber: 114,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$styled$2d$jsx$2f$style$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -562,19 +557,19 @@ function SettingsMenu() {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/components/SettingsMenu.tsx",
-                        lineNumber: 107,
+                        lineNumber: 106,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/components/SettingsMenu.tsx",
-                lineNumber: 89,
+                lineNumber: 88,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/components/SettingsMenu.tsx",
-        lineNumber: 76,
+        lineNumber: 75,
         columnNumber: 5
     }, this);
 }
@@ -839,7 +834,7 @@ function Chat() {
         setInput("");
         setIsLoading(true);
         try {
-            const response = await fetch("http://localhost:8000/query", {
+            const response = await fetch("http://localhost:8000/stream-query", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -850,18 +845,34 @@ function Chat() {
                     use_web_search: useWebSearch
                 })
             });
-            if (!response.ok) throw new Error("Failed to get response");
-            const data = await response.json();
+            if (!response.ok || !response.body) throw new Error("Failed to get response");
+            let assistantMessage = "";
+            // Add an empty assistant message first
             setChats((prevChats)=>prevChats.map((chat)=>chat.id === activeChatId ? {
                         ...chat,
                         messages: [
                             ...chat.messages,
                             {
                                 role: "assistant",
-                                content: data.response
+                                content: ""
                             }
                         ]
                     } : chat));
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            while(true){
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                assistantMessage += chunk;
+                setChats((prevChats)=>prevChats.map((chat)=>chat.id === activeChatId ? {
+                            ...chat,
+                            messages: chat.messages.map((msg, idx)=>idx === chat.messages.length - 1 && msg.role === "assistant" ? {
+                                    ...msg,
+                                    content: assistantMessage
+                                } : msg)
+                        } : chat));
+            }
         } catch (err) {
             console.error("Error:", err);
             setChats((prevChats)=>prevChats.map((chat)=>chat.id === activeChatId ? {
@@ -911,7 +922,7 @@ function Chat() {
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$components$2f$SettingsMenu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                 fileName: "[project]/app/page.tsx",
-                lineNumber: 129,
+                lineNumber: 153,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -927,7 +938,7 @@ function Chat() {
                         currentChatIsEmpty: currentChatIsEmpty
                     }, void 0, false, {
                         fileName: "[project]/app/page.tsx",
-                        lineNumber: 132,
+                        lineNumber: 156,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -940,12 +951,12 @@ function Chat() {
                                     children: "What can I help you find today?"
                                 }, void 0, false, {
                                     fileName: "[project]/app/page.tsx",
-                                    lineNumber: 144,
+                                    lineNumber: 168,
                                     columnNumber: 17
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/app/page.tsx",
-                                lineNumber: 143,
+                                lineNumber: 167,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$components$2f$chat$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["MessageList"], {
@@ -953,7 +964,7 @@ function Chat() {
                                 isLoading: isLoading
                             }, void 0, false, {
                                 fileName: "[project]/app/page.tsx",
-                                lineNumber: 150,
+                                lineNumber: 174,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$components$2f$chat$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ChatInput"], {
@@ -965,25 +976,25 @@ function Chat() {
                                 onSubmit: handleSubmit
                             }, void 0, false, {
                                 fileName: "[project]/app/page.tsx",
-                                lineNumber: 151,
+                                lineNumber: 175,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/app/page.tsx",
-                        lineNumber: 141,
+                        lineNumber: 165,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/app/page.tsx",
-                lineNumber: 131,
+                lineNumber: 155,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/app/page.tsx",
-        lineNumber: 128,
+        lineNumber: 152,
         columnNumber: 5
     }, this);
 }

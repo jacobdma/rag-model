@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 # Local imports
 from .rag import RAGPipeline
 from .config import ModelConfig
@@ -38,7 +38,6 @@ class QueryInput(BaseModel):
 class Configuration(BaseModel):
     temperature: float
     model: str
-    llm_rerank: bool
     tone: str
 
 # Exception handler for validation errors
@@ -70,3 +69,13 @@ async def set_config(config: Configuration):
         "tone": config.tone
     })
     return {"message": "Config updated", "config": CURRENT_CONFIG}
+
+@app.post("/stream-query")
+async def stream_query(input: QueryInput):
+    def token_generator():
+        yield from pipeline.stream_generate(
+            input.query,
+            input.history,
+            input.use_web_search
+        )
+    return StreamingResponse(token_generator(), media_type="text/plain")

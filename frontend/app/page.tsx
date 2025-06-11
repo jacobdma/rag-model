@@ -62,7 +62,7 @@ export default function Chat() {
 
 
   try {
-    const response = await fetch("http://localhost:8000/query", {
+    const response = await fetch("http://localhost:8000/stream-query", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
@@ -71,19 +71,43 @@ export default function Chat() {
         use_web_search: useWebSearch 
       }),
     })
-    if (!response.ok) throw new Error("Failed to get response")
-    const data = await response.json()
+    if (!response.ok || !response.body) throw new Error("Failed to get response")
 
+    let assistantMessage = ""
+    // Add an empty assistant message first
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === activeChatId
           ? {
               ...chat,
-              messages: [...chat.messages, { role: "assistant", content: data.response }],
+              messages: [...chat.messages, { role: "assistant", content: "" }],
             }
           : chat
       )
     )
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      const chunk = decoder.decode(value)
+      assistantMessage += chunk
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === activeChatId
+            ? {
+                ...chat,
+                messages: chat.messages.map((msg, idx) =>
+                  idx === chat.messages.length - 1 && msg.role === "assistant"
+                    ? { ...msg, content: assistantMessage }
+                    : msg
+                ),
+              }
+            : chat
+        )
+      )
+    }
   } catch (err) {
     console.error("Error:", err)
     setChats((prevChats) =>

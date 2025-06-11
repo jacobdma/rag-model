@@ -5,7 +5,7 @@ from . import config
 from .config import ModelConfig
 from sentence_transformers import SentenceTransformer
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, TextIteratorStreamer
+from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 import threading
 
 _LLM_ENGINE_INSTANCE = None
@@ -38,13 +38,36 @@ class LLMEngine:
             print(f">>> Model loaded in {(time.time() - start):.2f}s")
         return self._model_large, self._tokenizer_large
     
-    def prompt(self, prompt: str, max_new_tokens: int = 384, temperature: float = 0.2) -> str | list[str]:
+    def prompt(
+        self, 
+        prompt: str, 
+        max_new_tokens: int = 384, 
+        temperature: float = 0.2, 
+        stream: bool = True
+    ) -> str | list[str]:
         model, tokenizer = self._load_model(ModelConfig.MODEL)
-        device="cuda" if torch.cuda.is_available() else "cpu"
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         inputs = tokenizer(prompt, return_tensors="pt")
         input_ids = inputs.input_ids.to(device)
         print(f"Prompt token count: {input_ids.shape[1]}")
         print(f"Model temperature: {temperature}")
+
+        if stream:
+            streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+            generation_kwargs = dict(
+                input_ids=input_ids,
+                attention_mask=inputs.attention_mask.to(device),
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                do_sample=True,
+                top_p=0.85,
+                eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
+                streamer=streamer
+            )
+            thread = threading.Thread(target=model.generate, kwargs=generation_kwargs)
+            thread.start()
+            return streamer  # This is an iterator over generated tokens
 
         output_ids = model.generate(
             input_ids,

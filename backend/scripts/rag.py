@@ -114,43 +114,59 @@ class RAGPipeline:
             chat_history.append(Message(role="assistant", content=response))
         return response
 
-    def generate(self, query: str,chat_history: list[Message], use_web_search: bool = False) -> str | None:
-        """Run the RAG pipeline for interactive question answering."""
+    def stream_generate(self, query: str, chat_history: list[Message], use_web_search: bool = False):
+        """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
-
-        # Create keyword retriever and vector store
-        t0 = time.time()
         bm25_retriever, vector_store = self._get_retrievers()
-
         hybrid_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever["small"], bm25_retriever["large"], vector_store["small"].as_retriever(), vector_store["large"].as_retriever()],
+            retrievers=[bm25_retriever["small"], 
+                        bm25_retriever["large"], 
+                        vector_store["small"].as_retriever(), 
+                        vector_store["large"].as_retriever()],
             weights=[0.35, 0.15, 0.25, 0.25]
         )
 
         try:
-            web_results = None
-            # Employ web search if requested
+            web_results = ""
             if use_web_search:
                 t0 = time.time()
-                web_results = self._search_bing(query)
-                web_results = "\n\n".join(web_results)
+                web_results_list = self._search_bing(query)
+                web_results = "\n\n".join(web_results_list)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
-            # Builds history chain based on chat history and current query
             history_chain, chat_history = self._build_history_chain(chat_history, query)
-            
-            # Retrieves and filters context
-            results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
-            results = DocumentChunker(self.folder_paths).clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
-            
-            # Prompts the LLM for the final response
-            torch.cuda.empty_cache()
-            response = self._prompt_final_response(results, web_results, query, history_chain, chat_history) 
-            self._log_time(start_total, "[Pipeline] Total pipeline time:")
-            return response or "No response generated. Please try again."
 
+            results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
+            cleaned_results = DocumentChunker(self.folder_paths).clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
+            context_str = "\n".join(cleaned_results)
+            yield "[Context]\n" + context_str + "\n\n"
+
+            # Prepare prompt
+            response_prefix = config.RESPONSE_PREFIX
+            context_block = f"Context:\n{context_str}" if context_str else ""
+            history_str = ""
+            if history_chain:
+                history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain]
+                history_str = "Chat History:\n" + "\n".join(history_lines)
+            web_context_str = f"Web Context:\n{web_results}" if web_results else ""
+
+            prompt = config.PROMPT_LLM_TEMPLATE.format(
+                prefix=response_prefix.strip(),
+                context=context_block.strip(),
+                history=history_str.strip() if history_str else "",
+                web_context=web_context_str.strip() if web_context_str else "",
+                question=query.strip()
+            )
+
+            # Stream LLM output
+            streamer = self._prompt(
+                prompt=prompt,
+                temperature=ModelConfig.TEMPERATURE,
+                stream=True
+            )
+            for token in streamer:
+                yield token
+
+            self._log_time(start_total, "[Pipeline] Total pipeline time:")
         except Exception as e:
-            print(f"[run_pipeline Exception]: {e}")
-            import traceback
-            traceback.print_exc()
-            return f"Error in pipeline: {e}"
+            yield f"\n[Error]: {e}\n"

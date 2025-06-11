@@ -40,8 +40,8 @@ Answer the query using only the context below.
 Guidelines:
 - If the context covers multiple topics, focus only on the most relevant and actionable points needed to answer the query.
 - Do not add information not in the context.
-- Prioritize including all key points from the context that directly answer the query, in order of relevance.
-- Prefer quoting or closely paraphrasing the exact phrasing or structure from the context when possible.
+- Prioritize including all key points from the context that directly answer the query, in order of relevance. If multiple sources or domains are represented in the context, select the most relevant points across them.
+- Prefer quoting or paraphrasing the most relevant sections of the retrieved context when answering, especially when multiple domains or technical details are present.
 - Prefer a clearly structured bullet list when answering technical or standards-based questions, unless the query explicitly requests a paragraph.
 - Do not introduce vague or general statements not supported by the context.
 - Do not truncate your response prematurely; complete your answer fully before ending. If answering in bullets, complete the list of key points needed to answer the query.

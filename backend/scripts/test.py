@@ -22,7 +22,7 @@ sys.excepthook = log_uncaught_exceptions
 pipeline = None
 response = pipeline.generate(
     query="In ANSI B92.2M-1980, how do hard metric spline tolerances ensure interchangeability between mating parts, and what design strategies are available when a specific clearance or press fit is required?",
-    # Trial 2 query="What are the best practices for ensuring safety?",
+    # Trial 2 query="what are teh best practices for safety",
     chat_history=[],
     use_web_search=False
 )
