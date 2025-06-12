@@ -1,8 +1,12 @@
+# Standard library imports
+import yaml
+
 # Library-specific imports
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
+
 # Local imports
 from .rag import RAGPipeline
 from .config import ModelConfig
@@ -17,9 +21,14 @@ pipeline = RAGPipeline()
 pipeline._get_retrievers()
 get_llm_engine()._load_model(ModelConfig.MODEL)
 
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+allowed_origins = config.get("cors", {}).get("allowed_origins", [])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
