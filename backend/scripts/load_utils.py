@@ -1,19 +1,13 @@
 # Standard library imports
-import collections
-import logging
-import json
 import os
 import dill
 import yaml
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 # Third-party imports
 from tqdm import tqdm
 from io import BytesIO
 
-# Local imports
-from .file_readers import FileReader
 
 FileType = Path | tuple[str, BytesIO]
 
@@ -39,20 +33,6 @@ class DocumentLoader:
         self._RAW_IGNORE_FOLDERS = config["IGNORE_FOLDERS"]
         self._IGNORE_FOLDERS = {f.lower() for f in self._RAW_IGNORE_FOLDERS}
         self._IGNORE_KEYWORDS = set(config["IGNORE_KEYWORDS"])
-        self._supported_exts = {".docx", ".pptx", ".txt", ".pdf", ".csv"} # List of supported extensions to filter
-        self._skip_files = self._load_empty_file_skiplist()
-
-    def _load_empty_file_skiplist(self, log_path: Path = Path("logs/problem_files.tsv")) -> set:
-        if not log_path.exists():
-            return set()
-    
-        skip_files = set()
-        with open(log_path, encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split("\t")
-                if len(parts) >= 2 and parts[0] == "EMPTY_TEXT":
-                    skip_files.add(parts[1])
-        return skip_files
 
     # Gathers all file paths from a folder path
     def gather_supported_files(self, folder_path: str) -> list[Path]:
@@ -83,8 +63,8 @@ class DocumentLoader:
                 vectors = dill.load(f)
         else:
             unique_texts = list(dict.fromkeys(docs))
-            chunk_size = 25000
-            batch_size= 256
+            chunk_size = 100000
+            batch_size= 512
             encoded = {}
 
             with tqdm(total=len(unique_texts), desc="Embedding unique texts") as pbar:

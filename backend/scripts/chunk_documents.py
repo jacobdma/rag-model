@@ -3,7 +3,7 @@ import json
 import re
 import logging
 import json
-
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import ProcessPoolExecutor
 
@@ -20,12 +20,24 @@ class DocumentChunker:
         self._splitter_cache = {}
         self.folder_paths = folder_paths
         self.loader = DocumentLoader()
+        self._supported_exts = {".docx", ".pptx", ".txt", ".pdf", ".csv"} # List of supported extensions to filter
+        self._skip_files = self._load_empty_file_skiplist()
+
+    @staticmethod
+    def _load_empty_file_skiplist(log_path: Path = Path("logs/problem_files.tsv")) -> set:
+        if not log_path.exists():
+            return set()
+    
+        skip_files = set()
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split("\t")
+                if len(parts) >= 2 and parts[0] == "EMPTY_TEXT":
+                    skip_files.add(parts[1])
+        return skip_files
 
     def clean_paragraphs(self, docs: list[str], chunk_size: int, chunk_overlap: int, min_length: int = 50) -> list[str]:
         cleaned_chunks = []
-
-        if not hasattr(self, "_splitter_cache"):
-            self._splitter_cache = {}
         splitter_key = (chunk_size, chunk_overlap)
         if splitter_key not in self._splitter_cache:
             self._splitter_cache[splitter_key] = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
@@ -54,7 +66,6 @@ class DocumentChunker:
     def _get_chunks(self, granularity: int, chunk_size: int, chunk_overlap: int):
         cache_path = CACHE_DIR / f"chunked_docs_{granularity}.json"
         if cache_path.exists():
-            print(f"[CACHE] Loaded chunked documents from {cache_path}")
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     return json.load(f)
@@ -103,8 +114,7 @@ class DocumentChunker:
         results = []
         with ProcessPoolExecutor() as executor:
             futures = [
-                executor.submit(self.clean_paragraphs, text, chunk_size, chunk_overlap, chunk_size // 10)
-                for text in raw_documents
+                executor.submit(self.clean_paragraphs, raw_documents, chunk_size, chunk_overlap, chunk_size // 10)
             ]
             for future in tqdm(futures, total=len(raw_documents), desc=f"Chunking documents with {granularity} granularity"):
                 results.extend(future.result())
