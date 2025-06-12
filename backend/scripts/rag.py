@@ -28,8 +28,7 @@ class RAGPipeline:
     def __init__(self):
         self._cached_bm25 = None
         self._cached_vector = None
-        engine = get_llm_engine()
-        self._prompt = engine.prompt
+        self.engine = get_llm_engine()
         self._hybrid_retriever = HybridRetriever()
         with open("config.yaml", "r") as f:
             config = yaml.safe_load(f)
@@ -63,7 +62,7 @@ class RAGPipeline:
             if chat_history[i].role == "user" and chat_history[i + 1].role == "assistant"
         ]
         for user_msg, assistant_msg in pairs:
-            relevance = self._prompt(
+            relevance = self.engine.prompt(
                 prompt=config.HISTORY_PROMPT_TEMPLATE.format(
                     prev_query=user_msg.content,
                     prev_answer=assistant_msg.content,
@@ -71,6 +70,8 @@ class RAGPipeline:
                 ),
                 max_new_tokens=32
             )
+            if not isinstance(relevance, str):
+                relevance = "".join(token for token in relevance)
             print(f"History Relevance Response: {relevance}")
             if "yes" in relevance.lower():
                 history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
@@ -108,7 +109,7 @@ class RAGPipeline:
             question=query.strip()
         )
 
-        response = self._prompt(
+        response = self.engine.prompt(
             prompt=prompt,
             temperature=ModelConfig.TEMPERATURE
         )
@@ -164,10 +165,9 @@ class RAGPipeline:
             )
 
             # Stream LLM output
-            streamer = self._prompt(
+            streamer = self.engine.prompt(
                 prompt=prompt,
-                temperature=ModelConfig.TEMPERATURE,
-                stream=True
+                temperature=ModelConfig.TEMPERATURE
             )
             for token in streamer:
                 yield token
