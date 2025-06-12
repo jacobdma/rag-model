@@ -34,14 +34,13 @@ class RetrieverBuilder:
         missing_faiss = {g for g, path in self.faiss_paths.items() if not os.path.exists(path)}
         return missing_bm25, missing_faiss
 
-    def build_faiss(self, docs, path, embeddings, granularity):
+    def build_faiss(self, docs, path, granularity, embeddings):
         text_embeddings = DocumentLoader()._load_embeddings(granularity, embeddings, docs)
         faiss_store = FAISS.from_embeddings(text_embeddings, embedding=embeddings)
         faiss_store.save_local(path)
 
-    def _faiss_load(self, path, granularity):
+    def _faiss_load(self, path, granularity, embeddings):
         t0 = time.time()
-        embeddings = LLMEngine.load_bge_large_fp16()
         index = FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
         print(f"[FAISS] Loaded '{granularity}' in {time.time() - t0:.2f}s")
         return ('faiss', granularity, index)
@@ -61,6 +60,7 @@ class RetrieverBuilder:
     def build_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS]]:
         """Load or build BM25 and FAISS retrievers, caching FAISS in memory."""
         missing_bm25, missing_faiss = self._get_missing_retrievers()
+        embeddings = LLMEngine.load_bge_large_fp16()
 
         # Build missing retrievers
         for granularity in self.GRANULARITIES:
@@ -70,7 +70,7 @@ class RetrieverBuilder:
                 if granularity in missing_bm25:
                     self.build_bm25(docs, self.bm25_paths[granularity])
                 if granularity in missing_faiss:
-                    self.build_faiss(docs, self.faiss_paths[granularity], self.embeddings, granularity)
+                    self.build_faiss(docs, self.faiss_paths[granularity], granularity, embeddings)
         if not (missing_bm25 or missing_faiss):
             print("[INFO] All retrievers exist, loading from disk...")
 
@@ -81,7 +81,7 @@ class RetrieverBuilder:
                 for g, path in self.bm25_paths.items()
             ]
             faiss_futures = [
-                executor.submit(self._faiss_load, path, g)
+                executor.submit(self._faiss_load, path, g, embeddings)
                 for g, path in self.faiss_paths.items()
             ]
             retrievers_bm25, retrievers_faiss = {}, {}

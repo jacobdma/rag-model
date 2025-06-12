@@ -1,6 +1,5 @@
 import torch
 import time
-import re
 from . import config
 from .config import ModelConfig
 from sentence_transformers import SentenceTransformer
@@ -42,45 +41,32 @@ class LLMEngine:
         self, 
         prompt: str, 
         max_new_tokens: int = 384, 
-        temperature: float = 0.2, 
-        stream: bool = True
-    ) -> str | list[str]:
+        temperature: float = 0.2
+    ) -> TextIteratorStreamer:
         model, tokenizer = self._load_model(ModelConfig.MODEL)
         device = "cuda" if torch.cuda.is_available() else "cpu"
         inputs = tokenizer(prompt, return_tensors="pt")
         input_ids = inputs.input_ids.to(device)
+        attention_mask = inputs.attention_mask.to(device)
+        token = tokenizer.eos_token_id
         print(f"Prompt token count: {input_ids.shape[1]}")
         print(f"Model temperature: {temperature}")
 
-        if stream:
-            streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-            generation_kwargs = dict(
-                input_ids=input_ids,
-                attention_mask=inputs.attention_mask.to(device),
-                max_new_tokens=max_new_tokens,
-                temperature=temperature,
-                do_sample=True,
-                top_p=0.85,
-                eos_token_id=tokenizer.eos_token_id,
-                pad_token_id=tokenizer.eos_token_id,
-                streamer=streamer
-            )
-            thread = threading.Thread(target=model.generate, kwargs=generation_kwargs)
-            thread.start()
-            return streamer  # This is an iterator over generated tokens
-
-        output_ids = model.generate(
-            input_ids,
-            attention_mask=inputs.attention_mask.to(device),
+        streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+        generation_kwargs = dict(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             do_sample=True,
             top_p=0.85,
-            eos_token_id=tokenizer.eos_token_id,
-            pad_token_id=tokenizer.eos_token_id
+            eos_token_id=token,
+            pad_token_id=token,
+            streamer=streamer
         )
-        output_text = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        return output_text[len(prompt):].strip()
+        thread = threading.Thread(target=model.generate, kwargs=generation_kwargs)
+        thread.start()
+        return streamer
     
     @staticmethod
     def load_bge_large_fp16():
@@ -90,5 +76,11 @@ class LLMEngine:
             model = model.half()
         else:
             model = SentenceTransformer(model_name, device="cpu")
-        return lambda x, **kwargs: model.encode(x, **kwargs) if isinstance(x, list) else model.encode([x], **kwargs)[0]
 
+        def encode_fn(x, **kwargs):
+            if isinstance(x, list):
+                return model.encode(x, **kwargs)
+            else:
+                return model.encode([x], **kwargs)[0]
+
+        return encode_fn

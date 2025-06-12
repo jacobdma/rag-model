@@ -5,24 +5,30 @@ import yaml
 from pathlib import Path
 
 # Third-party imports
-from tqdm import tqdm
+from numpy import ndarray
 from io import BytesIO
+from tqdm import tqdm
 
 
 FileType = Path | tuple[str, BytesIO]
 
-def get_cache_dir():
+def get_cache_dir() -> tuple[Path, Path, Path, Path]:
+    """
+    Finds the project root (by searching for __init__.py), then returns
+    (CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR) as Path objects.
+    CACHE_DIR can be overridden by the CACHE_DIR environment variable.
+    """
     current = Path(__file__).resolve()
     for parent in current.parents:
         if (parent / "__init__.py").exists():
-            ROOT_DIR = parent
+            root_dir = parent
             break
     else:
         raise RuntimeError("Could not find project root (missing __init__.py)")
-    CACHE_DIR = Path(os.getenv("CACHE_DIR", ROOT_DIR / "cache"))
-    LOG_DIR = ROOT_DIR / "logs"
-    INDEX_DIR = ROOT_DIR / "indexes"
-    return CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR
+    cache_dir = Path(os.getenv("CACHE_DIR", root_dir / "cache")).resolve()
+    log_dir = root_dir / "logs"
+    index_dir = root_dir / "indexes"
+    return cache_dir, root_dir, log_dir, index_dir
 
 CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR = get_cache_dir()
 
@@ -37,54 +43,57 @@ class DocumentLoader:
     # Gathers all file paths from a folder path
     def gather_supported_files(self, folder_path: str) -> list[Path]:
         file_paths = []
+        ignore_folders = {str(Path(f)).lower() for f in self._IGNORE_FOLDERS}
+        ignore_keywords = {kw.lower() for kw in self._IGNORE_KEYWORDS}
 
         for root, dirs, files in os.walk(folder_path):
             root_path = Path(root)
-            if any(str(root_path).lower().startswith(str(Path(f)).lower()) for f in self._IGNORE_FOLDERS):
+            root_str = str(root_path).lower()
+            if any(root_str.startswith(f) for f in ignore_folders):
                 continue
-            dirs[:] = [
-                d for d in dirs
-                if not any(kw in d.lower() for kw in self._IGNORE_KEYWORDS)
-            ]
+            dirs[:] = [d for d in dirs if not any(kw in d.lower() for kw in ignore_keywords)] # Filter out ignored keywords
             for name in files:
-                if any(kw in name.lower() for kw in self._IGNORE_KEYWORDS):
+                if any(kw in name.lower() for kw in ignore_keywords): # Skip files with ignored keywords
                     continue
-                full_path = root_path / name
-                file_paths.append(full_path)
-
-        return [f for f in file_paths if f.suffix.lower() in self._supported_exts]
+                file_paths.append(root_path / name)
+        return file_paths
 
     @staticmethod
-    def _load_embeddings(granularity: str, embeddings, docs):
+    def _load_embeddings(granularity: str, embeddings, docs: list[str]) -> list[tuple[str, ndarray]]:
+        """
+        Embeds docs (list of str), caches and loads vectors for FAISS.
+        Returns list of (doc, vector) pairs in original order.
+        """
         faiss_cache_path = CACHE_DIR / f"faiss_cache_{granularity}.pkl"
         if faiss_cache_path.exists():
             print("[CACHE] Loading FAISS vectors from cache...")
             with open(faiss_cache_path, "rb") as f:
                 vectors = dill.load(f)
-        else:
-            unique_texts = list(dict.fromkeys(docs))
-            chunk_size = 100000
-            batch_size= 512
-            encoded = {}
+            return list(zip(docs, vectors))
 
-            with tqdm(total=len(unique_texts), desc="Embedding unique texts") as pbar:
-                for i in range(0, len(unique_texts), chunk_size):
-                    batch = unique_texts[i:i + chunk_size]
-                    try:
-                        batch_vectors = embeddings(batch, batch_size=batch_size, show_progress_bar=False)
-                        encoded.update(zip(batch, batch_vectors))
-                        pbar.update(len(batch))
-                    except RuntimeError as e:
-                        if "CUDA out of memory" in str(e) and batch_size > 16:
-                            print(f"[WARN] CUDA OOM at batch_size={batch_size}, retrying with half size")
-                            batch_size //= 2
-                            continue
-                        raise
+        # Deduplicate while preserving order
+        unique_texts = list(dict.fromkeys(docs))
+        chunk_size = 100_000
+        batch_size = 512
+        embedded = {}
 
-            # Reconstruct full list of vectors in original order
-            vectors = [encoded[t] for t in docs]
-            
-            with open(faiss_cache_path, "wb") as f:
-                dill.dump(vectors, f, protocol=dill.HIGHEST_PROTOCOL)
+        with tqdm(total=len(unique_texts), desc="Embedding unique texts") as pbar:
+            for i in range(0, len(unique_texts), chunk_size):
+                batch = unique_texts[i:i + chunk_size]
+                try:
+                    batch_vectors = embeddings(batch, batch_size=batch_size, show_progress_bar=False)
+                    embedded.update(zip(batch, batch_vectors))
+                    pbar.update(len(batch))
+                except RuntimeError as e:
+                    if "CUDA out of memory" in str(e) and batch_size > 16:
+                        print(f"[WARN] CUDA OOM at batch_size={batch_size}, retrying with half size")
+                        batch_size //= 2
+                        continue
+                    raise
+
+        # Reconstruct full list of vectors in original order
+        vectors = [embedded[t] for t in docs]
+        with open(faiss_cache_path, "wb") as f:
+            dill.dump(vectors, f, protocol=dill.HIGHEST_PROTOCOL)
 
         return list(zip(docs, vectors))
