@@ -59,7 +59,7 @@ class DocumentLoader:
         return file_paths
 
     @staticmethod
-    def _load_embeddings(granularity: str, embeddings, docs: list[str]) -> list[tuple[str, ndarray]]:
+    def load_embeddings(granularity: str, embeddings, docs: list[str]) -> list[tuple[str, ndarray]]:
         """
         Embeds docs (list of str), caches and loads vectors for FAISS.
         Returns list of (doc, vector) pairs in original order.

@@ -35,7 +35,7 @@ class RetrieverBuilder:
         return missing_bm25, missing_faiss
 
     def build_faiss(self, docs, path, granularity, embeddings):
-        text_embeddings = DocumentLoader()._load_embeddings(granularity, embeddings, docs)
+        text_embeddings = DocumentLoader().load_embeddings(granularity, embeddings, docs)
         faiss_store = FAISS.from_embeddings(text_embeddings, embedding=embeddings)
         faiss_store.save_local(path)
 
@@ -66,7 +66,7 @@ class RetrieverBuilder:
         for granularity in self.GRANULARITIES:
             if granularity in missing_bm25 or granularity in missing_faiss:
                 chunk_size, chunk_overlap = self.GRANULARITIES[granularity]
-                docs = self.chunker._get_chunks(granularity, chunk_size, chunk_overlap)
+                docs = self.chunker.get_chunks(granularity, chunk_size, chunk_overlap)
                 if granularity in missing_bm25:
                     self.build_bm25(docs, self.bm25_paths[granularity])
                 if granularity in missing_faiss:

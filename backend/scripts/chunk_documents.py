@@ -63,7 +63,7 @@ class DocumentChunker:
         return cleaned_chunks
     
     # Runs document chunking in parallel for faster processing
-    def _get_chunks(self, granularity: int, chunk_size: int, chunk_overlap: int):
+    def get_chunks(self, granularity: int, chunk_size: int, chunk_overlap: int):
         cache_path = CACHE_DIR / f"chunked_docs_{granularity}.json"
         if cache_path.exists():
             try:
@@ -114,9 +114,10 @@ class DocumentChunker:
         results = []
         with ProcessPoolExecutor() as executor:
             futures = [
-                executor.submit(self.clean_paragraphs, raw_documents, chunk_size, chunk_overlap, chunk_size // 10)
+                executor.submit(self.clean_paragraphs, [doc], chunk_size, chunk_overlap, chunk_size // 10)
+                for doc in raw_documents
             ]
-            for future in tqdm(futures, total=len(raw_documents), desc=f"Chunking documents with {granularity} granularity"):
+            for future in tqdm(as_completed(futures), total=len(raw_documents), desc=f"Chunking documents with {granularity} granularity"):
                 results.extend(future.result())
 
         # Cache chunked docs

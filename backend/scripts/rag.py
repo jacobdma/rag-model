@@ -55,24 +55,30 @@ class RAGPipeline:
     def _build_history_chain(self, chat_history: list[Message], query: str) -> tuple[list[dict[str, str]], list[Message]]:
         t0 = time.time()
         history_chain = []
-        
-        for i in range(len(chat_history) - 2, -1, -2):
-            if chat_history[i].role == "user" and chat_history[i + 1].role == "assistant":
-                relevance = self._prompt(
-                    prompt=config.HISTORY_PROMPT_TEMPLATE.format(
-                        prev_query=chat_history[i].content,
-                        prev_answer=chat_history[i + 1].content,
-                        current_query=query
-                    ),
-                    max_new_tokens=32
-                )
-                print(f"History Relevance Response: {relevance}")
 
-                if "yes" in relevance.lower():
-                    history_chain.insert(0, chat_history[i].model_dump())
-                    history_chain.insert(1, chat_history[i + 1].model_dump())
-                else:
-                    break
+        # Iterate over user/assistant pairs in reverse order
+        pairs = [
+            (chat_history[i], chat_history[i + 1])
+            for i in range(len(chat_history) - 2, -1, -2)
+            if chat_history[i].role == "user" and chat_history[i + 1].role == "assistant"
+        ]
+        for user_msg, assistant_msg in pairs:
+            relevance = self._prompt(
+                prompt=config.HISTORY_PROMPT_TEMPLATE.format(
+                    prev_query=user_msg.content,
+                    prev_answer=assistant_msg.content,
+                    current_query=query
+                ),
+                max_new_tokens=32
+            )
+            print(f"History Relevance Response: {relevance}")
+            if "yes" in relevance.lower():
+                history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
+            else:
+                break
+
+        # The chain was built in reverse order, so reverse it once
+        history_chain = history_chain[::-1]
 
         chat_history.append(Message(role="user", content=query))
         self._log_time(t0, "[Pipeline] History relevance chain built")
@@ -135,26 +141,25 @@ class RAGPipeline:
                 self._log_time(t0, "[Pipeline] Bing search took")
 
             history_chain, chat_history = self._build_history_chain(chat_history, query)
-
             results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
-            cleaned_results = DocumentChunker(self.folder_paths).clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
+            chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
+            cleaned_results = chunker.clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
             context_str = "\n".join(cleaned_results)
             yield "[Context]\n" + context_str + "\n\n"
 
-            # Prepare prompt
-            response_prefix = config.RESPONSE_PREFIX
-            context_block = f"Context:\n{context_str}" if context_str else ""
+            def format_block(label, content):
+                return f"{label}:\n{content.strip()}" if content else ""
+
             history_str = ""
             if history_chain:
                 history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain]
-                history_str = "Chat History:\n" + "\n".join(history_lines)
-            web_context_str = f"Web Context:\n{web_results}" if web_results else ""
+                history_str = format_block("Chat History", "\n".join(history_lines))
 
             prompt = config.PROMPT_LLM_TEMPLATE.format(
-                prefix=response_prefix.strip(),
-                context=context_block.strip(),
-                history=history_str.strip() if history_str else "",
-                web_context=web_context_str.strip() if web_context_str else "",
+                prefix=config.RESPONSE_PREFIX.strip(),
+                context=format_block("Context", context_str),
+                history=history_str,
+                web_context=format_block("Web Context", web_results),
                 question=query.strip()
             )
 
