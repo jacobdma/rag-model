@@ -7,7 +7,6 @@
 * [Getting started](#getting-started)
 * [Configuration](#configuration)
 * [Project Structure](#project-structure)
-* [Licensing & Attribution](#licensing---attribution)
 * [License Copies](#license-copies)
 * [Disclaimer](#disclaimer)
 * [Author](#author)

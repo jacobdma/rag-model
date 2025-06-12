@@ -52,7 +52,7 @@ env/
 pytorch/
 
 # frontend
-frontend/node_modules/
 frontend/.next/
+frontend/node_modules/
 frontend/out
 frontend/build

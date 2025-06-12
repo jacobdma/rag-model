@@ -20,7 +20,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
   const selected = options.find((o) => o.value === value)
 
   return (
-    <div className="mb-7 relative">
+    <div className="relative">
       {label && (
         <label className="block px-3 pb-2 text-sm font-medium text-neutral-700 dark:text-neutral-300">
           {label}
