@@ -75,7 +75,7 @@ class RetrieverBuilder:
             print("[INFO] All retrievers exist, loading from disk...")
 
         # Load all retrievers in parallel
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=16) as executor:
             bm25_futures = [
                 executor.submit(self._bm25_load, path, g)
                 for g, path in self.bm25_paths.items()

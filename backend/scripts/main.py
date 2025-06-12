@@ -62,10 +62,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Endpoints
-@app.post("/query") 
-async def ask(input: QueryInput):
-    response = pipeline.generate(input.query, input.history, input.use_web_search)
-    return {"response": response}
 
 CURRENT_CONFIG = {}
 @app.post("/set-config")

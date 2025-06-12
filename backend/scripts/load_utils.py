@@ -6,11 +6,7 @@ from pathlib import Path
 
 # Third-party imports
 from numpy import ndarray
-from io import BytesIO
 from tqdm import tqdm
-
-
-FileType = Path | tuple[str, BytesIO]
 
 def get_cache_dir() -> tuple[Path, Path, Path, Path]:
     """

@@ -65,6 +65,9 @@ class DocumentChunker:
     # Runs document chunking in parallel for faster processing
     def get_chunks(self, granularity: int, chunk_size: int, chunk_overlap: int):
         cache_path = CACHE_DIR / f"chunked_docs_{granularity}.json"
+        parsed_cache_path = CACHE_DIR / "parsed_text_docs.json"
+
+        # 1. Try to load chunked docs from cache
         if cache_path.exists():
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
@@ -72,8 +75,8 @@ class DocumentChunker:
             except Exception as e:
                 print(f"[ERROR] Chunked docs could not be loaded. Re-chunking... Exception: {e}")
 
-        # Load or parse raw documents
-        parsed_cache_path = CACHE_DIR / "parsed_text_docs.json"
+        # 2. Load or parse raw documents
+        raw_documents = []
         if parsed_cache_path.exists():
             print(f"[CACHE] Loaded pre-parsed documents from {parsed_cache_path}")
             with open(parsed_cache_path, "r", encoding="utf-8") as f:
@@ -83,24 +86,19 @@ class DocumentChunker:
             for folder in self.folder_paths:
                 all_files.extend(self.loader.gather_supported_files(folder))
             print(f"[DEBUG] Found {len(all_files)} total files to parse.")
-
-            raw_documents = []
-            with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar:
-                with ThreadPoolExecutor(max_workers=12) as executor:
-                    futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_file, f): f for f in all_files}
-                    for future in as_completed(futures):
-                        try:
-                            result = future.result()
-                        except Exception as e:
-                            logging.exception(f"[Thread Error] {e}")
-                            continue
-                        pbar.update(1)
+            with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
+                 ThreadPoolExecutor(max_workers=12) as executor:
+                futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_file, f): f for f in all_files}
+                for future in as_completed(futures):
+                    try:
+                        result = future.result()
                         if result:
-                            # If result is a tuple (filename, text), take text
                             text = result[1] if isinstance(result, tuple) else result
                             raw_documents.append(text)
+                    except Exception as e:
+                        logging.exception(f"[Thread Error] {e}")
+                    pbar.update(1)
             print(f"[DEBUG] ← Total successfully loaded documents: {len(raw_documents)}")
-            # Cache parsed docs as list of dicts for compatibility
             try:
                 with open(parsed_cache_path, "w", encoding="utf-8") as f:
                     json.dump(raw_documents, f, ensure_ascii=False)
@@ -110,21 +108,24 @@ class DocumentChunker:
         if not raw_documents:
             raise ValueError("No documents were loaded. Cannot create indexes.")
 
-        # Chunk and clean in parallel
+        # 3. Chunk and clean in parallel
         results = []
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(max_workers=8) as executor:
             futures = [
                 executor.submit(self.clean_paragraphs, [doc], chunk_size, chunk_overlap, chunk_size // 10)
                 for doc in raw_documents
             ]
             for future in tqdm(as_completed(futures), total=len(raw_documents), desc=f"Chunking documents with {granularity} granularity"):
-                results.extend(future.result())
+                try:
+                    results.extend(future.result())
+                except Exception as e:
+                    print(f"[WARN] Chunking failed for a document: {e}")
 
-        # Cache chunked docs
+        # 4. Cache chunked docs
         try:
             with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"[WARN] Failed to cache parsed docs: {e}")
-        
+
         return results
