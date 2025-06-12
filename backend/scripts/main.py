@@ -34,6 +34,7 @@ class QueryInput(BaseModel):
     query: str
     history: list[Message] = []
     use_web_search: bool
+    use_double_retrievers: bool = True
 
 class Configuration(BaseModel):
     temperature: float
@@ -76,6 +77,7 @@ async def stream_query(input: QueryInput):
         yield from pipeline.stream_generate(
             input.query,
             input.history,
-            input.use_web_search
+            input.use_web_search,
+            input.use_double_retrievers
         )
     return StreamingResponse(token_generator(), media_type="text/plain")

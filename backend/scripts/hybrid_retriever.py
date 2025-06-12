@@ -8,7 +8,6 @@ from langchain.retrievers import EnsembleRetriever
 
 class HybridRetriever:
     def retrieve_context(self, query: str, hybrid_retriever: EnsembleRetriever, max_results: int = 20) -> list[str]:
-        t0 = time.time()
         seen_content = set()
         unique_chunks = []
         try:
@@ -40,7 +39,6 @@ class HybridRetriever:
             for docs, weight in results:
                 flat_results.extend(docs)
 
-            print(f"[Pipeline] Parallel invoke took {(time.time() - t0):.2f} seconds")
             for doc in flat_results:
                 content = doc.page_content
                 if not self._filter_chunk(content):
@@ -51,7 +49,6 @@ class HybridRetriever:
         except Exception as e:
             print(f"[Retrieval] Query failed: {e}")
             traceback.print_exc()
-        print(f"[Pipeline] Query retrieval took {(time.time() - t0):.2f} seconds")
         return unique_chunks[:max_results]
 
     @staticmethod

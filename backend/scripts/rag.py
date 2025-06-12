@@ -3,6 +3,7 @@
 # Standard library imports
 import time
 import yaml
+import json
 
 # Third-party imports
 import requests
@@ -121,17 +122,24 @@ class RAGPipeline:
             chat_history.append(Message(role="assistant", content=response))
         return response
 
-    def stream_generate(self, query: str, chat_history: list[Message], use_web_search: bool = False):
+    def stream_generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True):
         """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
         bm25_retriever, vector_store = self._get_retrievers()
-        hybrid_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever["small"], 
+        if use_double_retrievers:
+            hybrid_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever["small"], 
                         bm25_retriever["large"], 
                         vector_store["small"].as_retriever(), 
                         vector_store["large"].as_retriever()],
-            weights=[0.35, 0.15, 0.25, 0.25]
-        )
+                weights=[0.35, 0.15, 0.25, 0.25]
+            )
+        else:
+            hybrid_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever["medium"], 
+                    vector_store["medium"].as_retriever()],
+            weights=[0.5, 0.5]
+            )
 
         try:
             web_results = ""
@@ -141,8 +149,8 @@ class RAGPipeline:
                 web_results = "\n\n".join(web_results_list)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
-            history_chain, chat_history = self._build_history_chain(chat_history, query)
             results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
+
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
             cleaned_results = chunker.clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
             context_str = "\n".join(cleaned_results)
@@ -151,7 +159,9 @@ class RAGPipeline:
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}" if content else ""
 
+    
             history_str = ""
+            history_chain = False
             if history_chain:
                 history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain]
                 history_str = format_block("Chat History", "\n".join(history_lines))

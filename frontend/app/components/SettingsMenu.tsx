@@ -5,7 +5,15 @@ import Dropdown from "@/components/Dropdown"
 import Slider from "@/components/Slider"
 import Toggle from "@/components/Toggle"
 
-export default function SettingsMenu() {
+interface SettingsMenuProps {
+  useDoubleRetrievers: boolean;
+  setUseDoubleRetrievers: (value: boolean) => void;
+}
+
+export default function SettingsMenu({
+  useDoubleRetrievers,
+  setUseDoubleRetrievers,
+}: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [temperature, setTemperature] = useState(0.00645)
   const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
@@ -116,11 +124,11 @@ const modelOptions = [
               displayValue={getTemperatureLabel(temperature)}
             />
             {/* Example Toggle usage */}
-            {/* <Toggle
-              checked={llmRerank}
-              onChange={setLlmRerank}
-              label="Double Retrieval"
-            /> */}
+            <Toggle
+              checked={useDoubleRetrievers}
+              onChange={setUseDoubleRetrievers}
+              label="Double Retrievers"
+            />
           </div>
         </div>
       )}

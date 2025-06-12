@@ -1,7 +1,7 @@
 'use client'
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, use } from "react"
 
 import { ChatInput, MessageList, Message } from "@/components/chat"
 import SettingsMenu from "@/components/SettingsMenu"
@@ -20,6 +20,7 @@ export default function Chat() {
   const [chats, setChats] = useState<ChatSession[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [useDoubleRetrievers, setUseDoubleRetrievers] = useState(true);
 
   const activeChat = chats.find((c) => c.id === activeChatId)
   const messages = activeChat?.messages ?? []
@@ -68,7 +69,8 @@ export default function Chat() {
       body: JSON.stringify({ 
         query: userMessage.content, 
         history: messages, 
-        use_web_search: useWebSearch 
+        use_web_search: useWebSearch,
+        use_double_retrievers: useDoubleRetrievers, 
       }),
     })
     if (!response.ok || !response.body) throw new Error("Failed to get response")
@@ -150,7 +152,10 @@ export default function Chat() {
 
   return (
     <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden">
-      <SettingsMenu/>
+      <SettingsMenu
+        useDoubleRetrievers={useDoubleRetrievers}
+        setUseDoubleRetrievers={setUseDoubleRetrievers}
+      />
 
       <div className="flex h-screen">
         <Sidebar
