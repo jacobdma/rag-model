@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, use } from "react"
+import { uuid } from "uuidv4"
 
 import { ChatInput, MessageList, Message } from "@/components/chat"
 import SettingsMenu from "@/components/SettingsMenu"
@@ -130,7 +131,7 @@ export default function Chat() {
   useEffect(() => {
     if (chats.length === 0) {
       const defaultChat: ChatSession = {
-        id: crypto.randomUUID(),
+        id: uuid(),
         name: "New Chat",
         messages: [],
       }

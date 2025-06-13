@@ -81,11 +81,9 @@ class RAGPipeline:
 
         # The chain was built in reverse order, so reverse it once
         history_chain = history_chain[::-1]
-
-        chat_history.append(Message(role="user", content=query))
         self._log_time(t0, "[Pipeline] History relevance chain built")
 
-        return history_chain, chat_history
+        return history_chain
 
     def _prompt_final_response(self, combined_context: str, web_context: str, query: str,
         history_chain: list[dict[str, str]], chat_history: list[Message]) -> str:
@@ -149,19 +147,19 @@ class RAGPipeline:
                 web_results = "\n\n".join(web_results_list)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
+            history_chain = self._build_history_chain(chat_history, query)
             results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
 
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
             cleaned_results = chunker.clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
             context_str = "\n".join(cleaned_results)
-            yield "[Context]\n" + context_str + "\n\n"
+            # yield "[Context]\n" + context_str + "\n\n"
 
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}" if content else ""
 
     
             history_str = ""
-            history_chain = False
             if history_chain:
                 history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain]
                 history_str = format_block("Chat History", "\n".join(history_lines))

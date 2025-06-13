@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, SquarePen, Trash2 } from "lucide-react"
 import type { Message } from "@/components/chat"
+import { uuid } from "uuidv4"
 
 type ChatSession = {
   id: string
@@ -30,7 +31,7 @@ export function Sidebar({
   function createNewChat() {
     const title = "New Chat"
     const newChat: ChatSession = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       name: title,
       messages: [],
     }
