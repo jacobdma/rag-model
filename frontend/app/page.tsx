@@ -64,7 +64,7 @@ export default function Chat() {
 
 
   try {
-    const response = await fetch("http://localhost:8000/stream-query", {
+    const response = await fetch(`http://${process.env.HOST_IP}:8000/stream-query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 

@@ -18,7 +18,6 @@ export default function SettingsMenu({
   const [temperature, setTemperature] = useState(0.00645)
   const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
   const [tone, setTone] = useState("neutral")
-  const menuRef = useRef<HTMLDivElement>(null)
 
 const temperatureStops = [
   { value: 0.00645, label: "Precise" },
@@ -33,24 +32,6 @@ function getTemperatureLabel(value: number): string {
   const match = temperatureStops.find((stop) => stop.value === value)
   return match ? match.label : "Unknown"
 }
-
-useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isOpen])
 
   // ✅ Sync config
   useEffect(() => {

@@ -76,6 +76,11 @@ uvicorn scripts.main:app
 
 # Start the FastAPI server for development
 uvicorn scripts.main:app --reload
+
+# Start the FastAPI server for LAN hosting
+uvicorn scripts.main:app --host 0.0.0.0 --port 8000
+
+# Access backend at localhost:8000/docs
 ```
 
 ### 2. Frontend
@@ -85,7 +90,7 @@ cd rag_model/frontend
 npm install
 npm run dev
 
-# Access the app at http://localhost:3000
+# Access the app at localhost:3000
 
 ```
 
