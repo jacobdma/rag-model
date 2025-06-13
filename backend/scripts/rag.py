@@ -85,41 +85,6 @@ class RAGPipeline:
 
         return history_chain
 
-    def _prompt_final_response(self, combined_context: str, web_context: str, query: str,
-        history_chain: list[dict[str, str]], chat_history: list[Message]) -> str:
-        """Generate the final response using the LLM."""
-        t0 = time.time()
-        response_prefix = config.RESPONSE_PREFIX
-        print("[Final Prompt] Prompting Final Prompt")
-
-        context_str = f"Context:\n{combined_context}" if combined_context else ""
-        history_str = ""
-        if history_chain:
-            history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain]
-            history_str = "Chat History:\n" + "\n".join(history_lines)
-
-        web_context_str = f"Web Context:\n{web_context}" if web_context else ""
-
-        prompt = config.PROMPT_LLM_TEMPLATE.format(
-            prefix=response_prefix.strip(),
-            context=context_str.strip(),
-            history=history_str.strip() if history_str else "",
-            web_context=web_context_str.strip() if web_context else "",
-            question=query.strip()
-        )
-
-        response = self.engine.prompt(
-            prompt=prompt,
-            temperature=ModelConfig.TEMPERATURE
-        )
-
-        self._log_time(t0, "[Pipeline] Final response took")
-        
-        # Avoid duplicate assistant responses in chat history
-        if not any(entry.content == response for entry in chat_history if entry.role == "assistant"):
-            chat_history.append(Message(role="assistant", content=response))
-        return response
-
     def stream_generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True):
         """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
@@ -152,22 +117,17 @@ class RAGPipeline:
 
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
             cleaned_results = chunker.clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
-            context_str = "\n".join(cleaned_results)
-            # yield "[Context]\n" + context_str + "\n\n"
+            context_str = "\n".join([doc.page_content for doc in cleaned_results])
 
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}" if content else ""
-
-    
-            history_str = ""
-            if history_chain:
-                history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain]
-                history_str = format_block("Chat History", "\n".join(history_lines))
+ 
+            history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
 
             prompt = config.PROMPT_LLM_TEMPLATE.format(
                 prefix=config.RESPONSE_PREFIX.strip(),
                 context=format_block("Context", context_str),
-                history=history_str,
+                history=format_block("Chat History", "\n".join(history_lines)),
                 web_context=format_block("Web Context", web_results),
                 question=query.strip()
             )

@@ -34,7 +34,6 @@ class HybridRetriever:
                     except Exception as e:
                         print(f"[Pipeline] Retriever {idx} failed: {e}")
 
-            # Flatten and merge results, respecting weights (optional: you can implement weighted merging)
             flat_results = []
             for docs, weight in results:
                 flat_results.extend(docs)

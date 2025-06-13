@@ -46,7 +46,7 @@ class RetrieverBuilder:
         return ('faiss', granularity, index)
 
     def build_bm25(self, docs, path):
-        bm25 = BM25Retriever.from_texts(docs)
+        bm25 = BM25Retriever.from_documents(docs)
         with open(path, "wb") as f:
             dill.dump(bm25, f)
 

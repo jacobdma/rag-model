@@ -62,7 +62,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Endpoints
-
 CURRENT_CONFIG = {}
 @app.post("/set-config")
 async def set_config(config: Configuration):

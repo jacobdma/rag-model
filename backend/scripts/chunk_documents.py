@@ -10,6 +10,7 @@ from concurrent.futures import ProcessPoolExecutor
 # Library specific imports
 from tqdm import tqdm
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
 
 # Local imports
 from .load_utils import CACHE_DIR, DocumentLoader
@@ -36,7 +37,10 @@ class DocumentChunker:
                     skip_files.add(parts[1])
         return skip_files
 
-    def clean_paragraphs(self, docs: list[str], chunk_size: int, chunk_overlap: int, min_length: int = 50) -> list[str]:
+    def clean_paragraphs(
+        self, docs: list[str], chunk_size: int, chunk_overlap: int, min_length: int = 50,
+        source: str = "", page: int = None
+    ) -> list[Document]:
         cleaned_chunks = []
         splitter_key = (chunk_size, chunk_overlap)
         if splitter_key not in self._splitter_cache:
@@ -46,6 +50,7 @@ class DocumentChunker:
         for doc in docs:
             split_chunks = splitter.split_text(doc)
             doc = re.sub(r"\s+", " ", doc).strip()
+            chunk_number = 0
             for chunk in split_chunks:
                 chunk = re.sub(r"\b\d{1,2}:\d{2}(:\d{2})?\b", "", chunk)  # timestamps
                 chunk = re.sub(r"[A-Z]{2,}\s?[0-9]{3,}", "", chunk)      # serial-like
@@ -55,10 +60,19 @@ class DocumentChunker:
                 if len(chunk) == 0 or (sum(c.isdigit() for c in chunk) / len(chunk)) > 0.5: # filters logs, heavy tables
                     continue
                 if len(chunk) >= min_length:
-                    cleaned_chunks.append(chunk)
+                    metadata = {
+                        "chunk_number": chunk_number,
+                        "source": source,
+                    }
+                    if page is not None:
+                        metadata["page"] = page
+                    cleaned_chunks.append(
+                        Document(page_content=chunk, metadata=metadata)
+                    )
+                    chunk_number += 1
 
                 unique_tokens = set(chunk.split())
-                if len(unique_tokens) < 5:  # tune this — 5 is a good start
+                if len(unique_tokens) < 5:
                     continue
         return cleaned_chunks
     
@@ -71,7 +85,8 @@ class DocumentChunker:
         if cache_path.exists():
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    loaded = json.load(f)
+                    return [Document(page_content=d["page_content"], metadata=d["metadata"]) for d in loaded]
             except Exception as e:
                 print(f"[ERROR] Chunked docs could not be loaded. Re-chunking... Exception: {e}")
 
@@ -124,7 +139,15 @@ class DocumentChunker:
         # 4. Cache chunked docs
         try:
             with open(cache_path, "w", encoding="utf-8") as f:
-                json.dump(results, f, indent=2, ensure_ascii=False)
+                json.dump(
+                    [
+                        {"page_content": doc.page_content, "metadata": doc.metadata}
+                        for doc in results
+                    ],
+                    f,
+                    indent=2,
+                    ensure_ascii=False,
+                )
         except Exception as e:
             print(f"[WARN] Failed to cache parsed docs: {e}")
 
