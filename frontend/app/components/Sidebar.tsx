@@ -1,15 +1,15 @@
 import { ChevronLeft, ChevronRight, SquarePen, Trash2 } from "lucide-react"
 import type { Message } from "@/components/chat"
-import { uuid } from "uuidv4"
+import { v4 } from "uuid"
 
 type ChatSession = {
   id: string
   name: string
-  messages: Message[]
+  history: Message[]
 }
 
 type SidebarProps = {
-  chats: { id: string; name: string; messages: Message[] }[]
+  chats: { id: string; name: string; history: Message[] }[]
   sidebarOpen: boolean
   activeChatId: string | null
   setActiveChatId: (id: string | null) => void
@@ -31,20 +31,28 @@ export function Sidebar({
   function createNewChat() {
     const title = "New Chat"
     const newChat: ChatSession = {
-      id: uuid(),
+      id: v4(),
       name: title,
-      messages: [],
+      history: [],
     }
     setChats((prev) => [...prev, newChat])
     setActiveChatId(newChat.id)
   }
   
-  function deleteChat(chatId: string) {
-    setChats((prev) => prev.filter((chat) => chat.id !== chatId))
+  async function deleteChat(chatId: string) {
+    const token = localStorage.getItem("access_token");
+    await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats/${chatId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setChats((prev) => prev.filter((chat) => chat.id !== chatId));
     if (chatId === activeChatId) {
-        const remaining = chats.filter((chat) => chat.id !== chatId)
-        setActiveChatId(remaining.length > 0 ? remaining[0].id : null)
-        }
+      const remaining = chats.filter((chat) => chat.id !== chatId);
+      setActiveChatId(remaining.length > 0 ? remaining[0].id : null);
+    }
   }
 
   return (

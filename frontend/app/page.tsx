@@ -1,31 +1,78 @@
 'use client'
 
 import type React from "react"
-import { useState, useEffect, use } from "react"
-import { uuid } from "uuidv4"
+import { useState, useEffect } from "react"
+import { v4 } from "uuid"
 
 import { ChatInput, MessageList, Message } from "@/components/chat"
 import SettingsMenu from "@/components/SettingsMenu"
 import { Sidebar } from "@/components/Sidebar"
+import LoginForm from "@/components/LoginForm"
 
 type ChatSession = {
   id: string
   name: string
-  messages: Message[]
+  history: Message[]
 }
 
 export default function Chat() {
+  // All hooks at the top!
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [useWebSearch, setUseWebSearch] = useState(false)
   const [chats, setChats] = useState<ChatSession[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [useDoubleRetrievers, setUseDoubleRetrievers] = useState(true);
+  const [useDoubleRetrievers, setUseDoubleRetrievers] = useState(true)
+  const [token, setToken] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("access_token")
+    const storedUsername = localStorage.getItem("username")   
+    if (storedToken) setToken(storedToken)
+    if (storedUsername) setUsername(storedUsername)
+  }, [])
+
+  useEffect(() => {
+    if (token) {
+      console.log(token)
+      fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(res => {
+        if (res.status === 401) {
+          localStorage.removeItem("access_token")
+          localStorage.removeItem("username")
+          setToken(null)
+          setUsername(null)
+          throw new Error("Unauthorized")
+        }
+        return res.json()
+      })
+      .then(data => {
+        const loadedChats = data.map((chat: any) => ({
+          id: chat._id,
+          name: chat.history?.[0]?.content?.slice(0, 30) || "New Chat",
+          history: chat.history,
+        }))
+        setChats(loadedChats)
+        if (loadedChats.length > 0) {
+          setActiveChatId(loadedChats[0].id)
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load chats", err)
+      })
+    }
+  }, [token])
+
+  // If no token, show login form
+  const showLogin = !token;
 
   const activeChat = chats.find((c) => c.id === activeChatId)
-  const messages = activeChat?.messages ?? []
-  const currentChatIsEmpty = messages.length === 0
+  const history = activeChat?.history ?? []
+  const currentChatIsEmpty = history.length === 0
 
   function generateChatTitle(message: string): string {
     const stopwords = new Set(["the", "a", "an", "of", "to", "is", "and", "in", "on", "with", "that", "for", "as"]);
@@ -53,7 +100,7 @@ export default function Chat() {
       chat.id === activeChatId
         ? {
             ...chat,
-            messages: [...chat.messages, { role: "user", content: input }],
+            history: [...chat.history, { role: "user", content: input }],
           }
         : chat
     )
@@ -66,12 +113,13 @@ export default function Chat() {
   try {
     const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`},
       body: JSON.stringify({ 
         query: userMessage.content, 
-        history: messages, 
+        history: history, 
         use_web_search: useWebSearch,
         use_double_retrievers: useDoubleRetrievers, 
+        chat_id: activeChatId
       }),
     })
     if (!response.ok || !response.body) throw new Error("Failed to get response")
@@ -83,7 +131,7 @@ export default function Chat() {
         chat.id === activeChatId
           ? {
               ...chat,
-              messages: [...chat.messages, { role: "assistant", content: "" }],
+              history: [...chat.history, { role: "assistant", content: "" }],
             }
           : chat
       )
@@ -101,8 +149,8 @@ export default function Chat() {
           chat.id === activeChatId
             ? {
                 ...chat,
-                messages: chat.messages.map((msg, idx) =>
-                  idx === chat.messages.length - 1 && msg.role === "assistant"
+                history: chat.history.map((msg, idx) =>
+                  idx === chat.history.length - 1 && msg.role === "assistant"
                     ? { ...msg, content: assistantMessage }
                     : msg
                 ),
@@ -118,7 +166,7 @@ export default function Chat() {
         chat.id === activeChatId
           ? {
               ...chat,
-              messages: [...chat.messages, { role: "assistant", content: "Sorry, there was an error processing your request." }],
+              history: [...chat.history, { role: "assistant", content: "Sorry, there was an error processing your request." }],
             }
           : chat
         )
@@ -127,32 +175,43 @@ export default function Chat() {
       setIsLoading(false)
     }
   }
-  const isEmpty = messages.length === 0
+  const isEmpty = history.length === 0
   useEffect(() => {
-    if (chats.length === 0) {
+    if (chats.length === 0 && !activeChatId) {
+      const newChatId = v4();
       const defaultChat: ChatSession = {
-        id: uuid(),
+        id: newChatId,
         name: "New Chat",
-        messages: [],
-      }
-      setChats([defaultChat])
-      setActiveChatId(defaultChat.id)
+        history: [],
+      };
+      setChats([defaultChat]);
+      setActiveChatId(newChatId);
     }
-  }, [chats])
+  }, [activeChatId, chats.length]);
 
   useEffect(() => {
-    if (messages.length ===  1 && activeChatId) {
-      const newTitle = generateChatTitle(messages[0].content)
+    if (history.length ===  1 && activeChatId) {
+      const newTitle = generateChatTitle(history[0].content)
       setChats((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === activeChatId ? { ...chat, name: newTitle } : chat
+        prevChats.map((chat) =>
+          chat.id === activeChatId ? { ...chat, name: newTitle } : chat
+        )
       )
-    )
-  }
-}, [messages, activeChatId])
+    }
+  }, [history, activeChatId])
 
-  return (
+  return showLogin
+  ? <LoginForm onLogin={(tok, user) => {
+      setToken(tok)
+      setUsername(user)
+      localStorage.setItem("access_token", tok)
+      localStorage.setItem("username", user)
+    }} />
+  : (
     <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden">
+      <div className="absolute top-4 left-4 z-50 bg-white dark:bg-neutral-800 px-3 py-1 rounded-full text-sm shadow text-neutral-800 dark:text-neutral-200">
+        {username ? `Signed in as ${username}` : "Not signed in"}
+      </div>
       <SettingsMenu
         useDoubleRetrievers={useDoubleRetrievers}
         setUseDoubleRetrievers={setUseDoubleRetrievers}
@@ -177,7 +236,7 @@ export default function Chat() {
               </div>
             )}
 
-            <MessageList messages={messages} isLoading={isLoading} />
+            <MessageList messages={history} isLoading={isLoading} />
             <ChatInput
               input={input}
               setInput={setInput}
