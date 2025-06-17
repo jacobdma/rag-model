@@ -101,6 +101,7 @@ db = client["chat_app"]
 chats_collection = db["chats"]
 
 def get_username_from_token(token: str) -> str:
+    token = token.replace("Bearer ", "")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         return payload.get("sub")
@@ -139,7 +140,7 @@ async def stream_query(input: QueryInput, authorization: str = Header(...)):
 
     def token_generator():
         nonlocal assistant_reply
-        for chunk in pipeline.stream_generate(
+        for chunk in pipeline.generate(
             input.query,
             input.history,
             input.use_web_search,
@@ -172,7 +173,7 @@ async def stream_query(input: QueryInput, authorization: str = Header(...)):
 
 @app.get("/chats")
 async def get_chats(authorization: str = Header(...)):
-    username = get_username_from_token(authorization.replace("Bearer ", ""))
+    username = get_username_from_token(authorization)
     chats = list(chats_collection.find({"username": username}))
     for chat in chats:
         chat["_id"] = str(chat["_id"])
@@ -180,7 +181,7 @@ async def get_chats(authorization: str = Header(...)):
 
 @app.delete("/chats/{chat_id}")
 async def delete_chat(chat_id: str = Path(...), authorization: str = Header(...)):
-    username = get_username_from_token(authorization.replace("Bearer ", ""))
+    username = get_username_from_token(authorization)
     
     result = chats_collection.delete_one({
         "_id": str(chat_id),

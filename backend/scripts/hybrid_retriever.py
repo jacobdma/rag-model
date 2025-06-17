@@ -1,41 +1,44 @@
 # Standard library imports
-import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Third-party imports
 from langchain.retrievers import EnsembleRetriever
 
+# Local imports
+from .config import templates
+
 class HybridRetriever:
+    def query_reform(query: str, prompt) -> str:
+        rewrite_prompt = templates["Rewrite"].format(query=query)
+        rewrite_output = prompt(rewrite_prompt)
+
+        subquery_prompt = templates["Subquery Decomposition"].format(query=rewrite_output)
+        subquery_output = prompt(subquery_prompt)
+
+        condensed_prompt = templates["Condense"].format(query=subquery_output)
+        condensed_output = prompt(condensed_prompt)
+
+        return condensed_output
+    
     def retrieve_context(self, query: str, hybrid_retriever: EnsembleRetriever, max_results: int = 20) -> list[str]:
         seen_content = set()
         unique_chunks = []
         try:
             # Parallelize each retriever in the ensemble
             retrievers = hybrid_retriever.retrievers
-            weights = getattr(hybrid_retriever, "weights", [1] * len(retrievers))
-
-            def run_retriever(retriever):
-                try:
-                    return retriever.invoke(query)
-                except Exception as e:
-                    print(f"[Retrieval] Sub-retriever failed: {e}")
-                    traceback.print_exc()
-                    return []
-
             results = []
             with ThreadPoolExecutor() as executor:
-                future_to_idx = {executor.submit(run_retriever, retriever): i for i, retriever in enumerate(retrievers)}
-                for future in as_completed(future_to_idx):
-                    idx = future_to_idx[future]
+                futures = [executor.submit(retriever.invoke, query) for retriever in retrievers]
+                for future in as_completed(futures):
                     try:
                         docs = future.result()
-                        results.append((docs, weights[idx]))
+                        results.extend(docs)
                     except Exception as e:
-                        print(f"[Pipeline] Retriever {idx} failed: {e}")
+                        print(f"[Pipeline] Retriever failed: {e}")
 
             flat_results = []
-            for docs, weight in results:
+            for docs in results:
                 flat_results.extend(docs)
 
             for doc in flat_results:

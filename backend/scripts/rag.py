@@ -52,40 +52,7 @@ class RAGPipeline:
     def _log_time(self, start: float, message: str) -> None:
         print(f"{message} {time.time() - start:.2f} seconds")
 
-    def _build_history_chain(self, chat_history: list[Message], query: str) -> tuple[list[dict[str, str]], list[Message]]:
-        t0 = time.time()
-        history_chain = []
-
-        # Iterate over user/assistant pairs in reverse order
-        pairs = [
-            (chat_history[i], chat_history[i + 1])
-            for i in range(len(chat_history) - 2, -1, -2)
-            if chat_history[i].role == "user" and chat_history[i + 1].role == "assistant"
-        ]
-        for user_msg, assistant_msg in pairs:
-            relevance = self.engine.prompt(
-                prompt=config.HISTORY_PROMPT_TEMPLATE.format(
-                    prev_query=user_msg.content,
-                    prev_answer=assistant_msg.content,
-                    current_query=query
-                ),
-                max_new_tokens=32
-            )
-            if not isinstance(relevance, str):
-                relevance = "".join(token for token in relevance)
-            print(f"History Relevance Response: {relevance}")
-            if "yes" in relevance.lower():
-                history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
-            else:
-                break
-
-        # The chain was built in reverse order, so reverse it once
-        history_chain = history_chain[::-1]
-        self._log_time(t0, "[Pipeline] History relevance chain built")
-
-        return history_chain
-
-    def stream_generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True):
+    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True):
         """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
         bm25_retriever, vector_store = self._get_retrievers()
@@ -94,14 +61,12 @@ class RAGPipeline:
                 retrievers=[bm25_retriever["small"], 
                         bm25_retriever["large"], 
                         vector_store["small"].as_retriever(), 
-                        vector_store["large"].as_retriever()],
-                weights=[0.35, 0.15, 0.25, 0.25]
+                        vector_store["large"].as_retriever()]
             )
         else:
             hybrid_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever["medium"], 
-                    vector_store["medium"].as_retriever()],
-            weights=[0.5, 0.5]
+                    vector_store["medium"].as_retriever()]
             )
 
         try:
@@ -112,12 +77,29 @@ class RAGPipeline:
                 web_results = "\n\n".join(web_results_list)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
-            history_chain = self._build_history_chain(chat_history, query)
-            results = self._hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5)
+            history_chain = []
+
+            # Iterate over user/assistant pairs in reverse order
+            pairs = [
+                (chat_history[i], chat_history[i + 1])
+                for i in range(len(chat_history) - 2, -1, -2)
+                if chat_history[i].role == "user" and chat_history[i + 1].role == "assistant"
+            ]
+            for user_msg, assistant_msg in pairs:
+                history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
+
+            history_chain = history_chain[::-1]
+
+            t0 = time.time()
+            reformed_query = HybridRetriever.query_reform(query, self.engine.prompt)
+            self._log_time(t0, "[Pipeline] Query reformulation took")
+            print(f"[DEBUG] Reformulated query: {reformed_query}")
+
+            context = self._hybrid_retriever.retrieve_context(reformed_query, hybrid_retriever, max_results=5)
 
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
-            cleaned_results = chunker.clean_paragraphs(results, min_length=50, chunk_size=512, chunk_overlap=50)
-            context_str = "\n".join([doc.page_content for doc in cleaned_results])
+            context = chunker.clean_paragraphs(context, min_length=50, chunk_size=512, chunk_overlap=50)
+            context_str = "\n".join([doc.page_content for doc in context])
 
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}" if content else ""
@@ -135,7 +117,8 @@ class RAGPipeline:
             # Stream LLM output
             streamer = self.engine.prompt(
                 prompt=prompt,
-                temperature=ModelConfig.TEMPERATURE
+                temperature=ModelConfig.TEMPERATURE,
+                stream=True
             )
             for token in streamer:
                 yield token

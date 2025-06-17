@@ -66,10 +66,9 @@ def main():
 
             # Add user message to history
             chat_history.append(Message(role="user", content=query))
+            
             # Stream response
             stream_query(pipeline, query, chat_history)
-            # Add assistant message to history (simulate, you may want to capture the full response)
-            # For simplicity, not capturing the full assistant response here
         except KeyboardInterrupt:
             print("\nExiting.")
             break

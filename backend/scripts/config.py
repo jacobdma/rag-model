@@ -65,3 +65,67 @@ Current Question: {current_query}
 
 Respond ONLY with \"YES\" or \"NO\", no explanations or additional text.
 """
+
+templates = {
+        "Rewrite": """
+You are a precise query rewriting system.
+
+Your task is to slightly rewrite user queries to make them clearer, well-formed, and suitable for search. Do not add assumptions. Preserve original intent exactly. Maintain all keywords.
+If a query is vague and the domain is not explicitly specified, assume the user is referring to a mechanical or engineering context.
+Informal or misspelled language should be expanded and clarified to reflect likely intent (e.g. 'parts r rubbin' -> 'parts are rubbing', 'u can get 2 hot' -> 'you can get too hot')
+If a query is a vague or objective statement, infer the likely intent and rewrite it as a precise, standalone question that expresses what the user is trying to learn or solve.
+It is acceptable to expand the query slightly to clarify the intended domain or make implicit assumptions explicit.
+
+Examples:
+Original: How tall is the Eiffel Tower? It looked so high when I was there last year?
+Rewritten: What is the height of the Eiffel Tower?
+
+Original: 1 oz is 28 trams, how many cm is 1 inch?
+Rewritten: Convert 1 inch to cm
+
+Original: What's the main point of the article? What did the author try to convey?
+Rewritten: What is the main key point of this article?
+
+Original: parts r rubbin
+Rewritten: What causes excessive rubbing between mechanical parts, and how can it be prevented?
+
+If you do not recognize a word or acronym, do not try to rewrite it.
+Only rewrite the user's question. Do not insert, remove, or hallucinate content. 
+Do not repeat examples. Do not respond conversationally. Each rewrite must be a single sentence.
+
+USER QUERY: {query}
+Rewritten:""",
+        "Condense": """
+From the following rewritten queries, find the common question and condense it into a singular, one-sentence question that addresses all major points of the subquestions.
+
+If you don't recognize a word or acronym, do not try to rewrite it. Preserve all original meaning and intent.
+
+SUB QUESTIONS: {query}
+Response:""",
+        "Subquery Decomposition": """
+You are a helpful assistant that generates search queries based on a single input query. 
+
+Perform query decomposition. Given a short or vague user query, break it into high-quality, atomic, distinct sub-questions that clarify the information need. 
+
+Do not invent context. If domain is unspecified, keep questions general.
+If the USER QUERY includes a relationship between two or more subjects (e.g., differences, similarities, dependencies, tradeoffs), include one or more sub-questions that explicitly address the relationship.
+If the USER QUERY includes numeric ranges, tolerances, or measurement units, include sub-questions that clarify definitions, measurement methods, influencing factors, and relevant standards — not just the numeric constraint itself.
+
+Format: List sub-questions in numbered format.
+
+Examples (for context only):
+Query: How does reinforcement learning apply to autonomous driving, and what models are most effective?
+Sub-questions:
+1. How is reinforcement learning used in autonomous driving?
+2. What reinforcement learning models are most effective for autonomous vehicles?
+
+Query: What is the minimum clearance required?
+Sub-questions:
+1. How does clearance differ across applications?
+2. Are there any applicable standards that define minimum clearance for this case?
+3. What are the risks of insufficient clearance?
+
+Now decompose the following:
+
+USER QUERY: {query}
+Sub-questions:"""}
