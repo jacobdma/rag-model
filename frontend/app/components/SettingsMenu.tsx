@@ -66,7 +66,7 @@ const modelOptions = [
     <div className="absolute top-3 right-3">
       <div className="flex justify-end mb-3">
         <button
-          className="p-2 rounded-xl flex items-center gap-2 
+          className="p-2 rounded-3xl flex items-center gap-2 
           text-neutral-700 dark:text-neutral-300 font-semibold 
           hover:bg-neutral-200 dark:hover:bg-neutral-800"
           onClick={() => setIsOpen(!isOpen)}
@@ -76,7 +76,7 @@ const modelOptions = [
       </div>
 
       {isOpen && (
-        <div className="px-2 py-2 pt-3 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-lg w-72">
+        <div className="px-2 py-2 pt-3 backdrop-blur-xs border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-lg w-72">
           <div className="flex flex-col gap-7">
             {/* Tone Selector */}
             <Dropdown

@@ -26,6 +26,7 @@ export default function Chat() {
   const [useDoubleRetrievers, setUseDoubleRetrievers] = useState(true)
   const [token, setToken] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
+  const [showLoginForm, setShowLoginForm] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -67,9 +68,6 @@ export default function Chat() {
     }
   }, [token])
 
-  // If no token, show login form
-  const showLogin = !token;
-
   const activeChat = chats.find((c) => c.id === activeChatId)
   const history = activeChat?.history ?? []
   const currentChatIsEmpty = history.length === 0
@@ -95,80 +93,80 @@ export default function Chat() {
     if (!input.trim()) return
     const userMessage: Message = { role: "user", content: input }
 
-  setChats((prevChats) =>
-    prevChats.map((chat) =>
-      chat.id === activeChatId
-        ? {
-            ...chat,
-            history: [...chat.history, { role: "user", content: input }],
-          }
-        : chat
-    )
-  )
-
-  setInput("")
-  setIsLoading(true)
-
-
-  try {
-    const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`},
-      body: JSON.stringify({ 
-        query: userMessage.content, 
-        history: history, 
-        use_web_search: useWebSearch,
-        use_double_retrievers: useDoubleRetrievers, 
-        chat_id: activeChatId
-      }),
-    })
-    if (!response.ok || !response.body) throw new Error("Failed to get response")
-
-    let assistantMessage = ""
-    // Add an empty assistant message first
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === activeChatId
           ? {
               ...chat,
-              history: [...chat.history, { role: "assistant", content: "" }],
+              history: [...chat.history, { role: "user", content: input }],
             }
           : chat
       )
     )
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      const chunk = decoder.decode(value)
-      assistantMessage += chunk
+    setInput("")
+    setIsLoading(true)
+
+
+    try {
+      const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`},
+        body: JSON.stringify({ 
+          query: userMessage.content, 
+          history: history, 
+          use_web_search: useWebSearch,
+          use_double_retrievers: useDoubleRetrievers, 
+          chat_id: activeChatId
+        }),
+      })
+      if (!response.ok || !response.body) throw new Error("Failed to get response")
+
+      let assistantMessage = ""
+      // Add an empty assistant message first
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat.id === activeChatId
             ? {
                 ...chat,
-                history: chat.history.map((msg, idx) =>
-                  idx === chat.history.length - 1 && msg.role === "assistant"
-                    ? { ...msg, content: assistantMessage }
-                    : msg
-                ),
+                history: [...chat.history, { role: "assistant", content: "" }],
               }
             : chat
         )
       )
-    }
-  } catch (err) {
-    console.error("Error:", err)
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === activeChatId
-          ? {
-              ...chat,
-              history: [...chat.history, { role: "assistant", content: "Sorry, there was an error processing your request." }],
-            }
-          : chat
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        assistantMessage += chunk
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === activeChatId
+              ? {
+                  ...chat,
+                  history: chat.history.map((msg, idx) =>
+                    idx === chat.history.length - 1 && msg.role === "assistant"
+                      ? { ...msg, content: assistantMessage }
+                      : msg
+                  ),
+                }
+              : chat
+          )
+        )
+      }
+    } catch (err) {
+      console.error("Error:", err)
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === activeChatId
+            ? {
+                ...chat,
+                history: [...chat.history, { role: "assistant", content: "Sorry, there was an error processing your request." }],
+              }
+            : chat
         )
       )
     } finally {
@@ -200,17 +198,27 @@ export default function Chat() {
     }
   }, [history, activeChatId])
 
-  return showLogin
-  ? <LoginForm onLogin={(tok, user) => {
-      setToken(tok)
-      setUsername(user)
-      localStorage.setItem("access_token", tok)
-      localStorage.setItem("username", user)
-    }} />
+  return showLoginForm
+  ? <LoginForm
+      onLogin={(tok, user) => {
+        setToken(tok);
+        setUsername(user);
+        setShowLoginForm(false);
+      }}
+      onGuest={() => setShowLoginForm(false)}
+    />
   : (
     <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden">
-      <div className="absolute top-4 left-4 z-50 bg-white dark:bg-neutral-800 px-3 py-1 rounded-full text-sm shadow text-neutral-800 dark:text-neutral-200">
-        {username ? `Signed in as ${username}` : "Not signed in"}
+      <div
+        className={`absolute top-4 left-4 z-50 px-3 py-2 rounded-3xl flex items-center gap-2 
+          text-neutral-700 dark:text-neutral-300 font-semibold ${username 
+            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700" 
+            : "text-white bg-green-500 hover:bg-green-600"
+          }`}
+        onClick={() => setShowLoginForm(true)}
+        title={username ? "Switch account" : "Sign in"}
+      >
+        {username ? `${username}` : "Sign In"}
       </div>
       <SettingsMenu
         useDoubleRetrievers={useDoubleRetrievers}
