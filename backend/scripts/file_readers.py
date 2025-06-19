@@ -69,7 +69,9 @@ class FileReader:
         if filename in self._skip_files or ext not in self._supported_exts:
             return None
         with open(file, "rb") as f:
-            return self.read_docs(f, filename, ext)
+            text = self.read_docs(f, filename, ext)
+
+        return text, filename
 
     def read_docs(self, f, filename, ext):
         readers = {

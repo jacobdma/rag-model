@@ -102,14 +102,14 @@ class DocumentChunker:
                 all_files.extend(self.loader.gather_supported_files(folder))
             print(f"[DEBUG] Found {len(all_files)} total files to parse.")
             with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
-                 ThreadPoolExecutor(max_workers=12) as executor:
+                 ThreadPoolExecutor(max_workers=16) as executor:
                 futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_file, f): f for f in all_files}
                 for future in as_completed(futures):
                     try:
                         result = future.result()
                         if result:
-                            text = result[1] if isinstance(result, tuple) else result
-                            raw_documents.append(text)
+                            text, filename = result
+                            raw_documents.append((text, filename))
                     except Exception as e:
                         logging.exception(f"[Thread Error] {e}")
                     pbar.update(1)
@@ -127,8 +127,8 @@ class DocumentChunker:
         results = []
         with ProcessPoolExecutor(max_workers=8) as executor:
             futures = [
-                executor.submit(self.clean_paragraphs, [doc], chunk_size, chunk_overlap, chunk_size // 10)
-                for doc in raw_documents
+                executor.submit(self.clean_paragraphs, [text], chunk_size, chunk_overlap, chunk_size // 10, source=filename)
+                for text, filename in raw_documents
             ]
             for future in tqdm(as_completed(futures), total=len(raw_documents), desc=f"Chunking documents with {granularity} granularity"):
                 try:

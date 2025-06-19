@@ -3,7 +3,6 @@
 # Standard library imports
 import time
 import yaml
-import json
 
 # Third-party imports
 import requests
@@ -55,6 +54,7 @@ class RAGPipeline:
     def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True):
         """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
+        # 1. Load retrievers
         bm25_retriever, vector_store = self._get_retrievers()
         if use_double_retrievers:
             hybrid_retriever = EnsembleRetriever(
@@ -69,17 +69,18 @@ class RAGPipeline:
                     vector_store["medium"].as_retriever()]
             )
 
+        # Try to run pipeline
         try:
-            web_results = ""
+            # 2. Get web search results
+            web_results = None
             if use_web_search:
                 t0 = time.time()
                 web_results_list = self._search_bing(query)
                 web_results = "\n\n".join(web_results_list)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
+            # 3. Get chat history
             history_chain = []
-
-            # Iterate over user/assistant pairs in reverse order
             pairs = [
                 (chat_history[i], chat_history[i + 1])
                 for i in range(len(chat_history) - 2, -1, -2)
@@ -89,36 +90,36 @@ class RAGPipeline:
                 history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
 
             history_chain = history_chain[::-1]
-                
-            t0 = time.time()
-            reformed_query = HybridRetriever.query_reform(query, self.engine.prompt)
-            self._log_time(t0, "[Pipeline] Query reformulation took")
-            print(f"[DEBUG] Reformulated query: {reformed_query}")
             
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            context = self._hybrid_retriever.retrieve_context(reformed_query, hybrid_retriever, max_results=5)
+            # 4. Reform query for better retrieval/response
+            t0 = time.time()
+            refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
+            self._log_time(t0, "[Pipeline] Query reformulation took")
+            print(f"[DEBUG] Refined query: {refined_query}")
 
+            # 5. Invokes retrievers to get relevant chunks
+            context = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5)
+
+            # 6. Cleans up retrieved context
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
             context = chunker.clean_paragraphs(context, min_length=50, chunk_size=512, chunk_overlap=50)
             context_str = "\n".join([doc.page_content for doc in context])
 
+            # 7. Constructs prompt\
             def format_block(label, content):
-                return f"{label}:\n{content.strip()}" if content else ""
+                return f"{label}:\n{content.strip()}\n\n" if content else ""
  
             history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
 
-            prompt = config.PROMPT_LLM_TEMPLATE.format(
-                prefix=config.RESPONSE_PREFIX.strip(),
+            prompt = config.RESPONSE_PREFIX.format(
                 context=format_block("Context", context_str),
                 history=format_block("Chat History", "\n".join(history_lines)),
                 web_context=format_block("Web Context", web_results),
-                question=query.strip()
+                original_query=format_block("Original Query", query.strip()),
+                refined_query=format_block("Refined Query", refined_query.strip())
             )
 
-            print(f"\n\n\n Prompt:\n{prompt}\n\n")
-
-            # Stream LLM output
+            # 8. Prompts LLM with context
             streamer = self.engine.prompt(
                 prompt=prompt,
                 temperature=ModelConfig.TEMPERATURE,

@@ -1,6 +1,5 @@
 # Standard library imports
 import os
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 

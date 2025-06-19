@@ -7,6 +7,7 @@ from pathlib import Path
 # Third-party imports
 from numpy import ndarray
 from tqdm import tqdm
+from langchain_core.documents import Document
 
 def get_cache_dir() -> tuple[Path, Path, Path, Path]:
     """
@@ -55,22 +56,29 @@ class DocumentLoader:
         return file_paths
 
     @staticmethod
-    def load_embeddings(granularity: str, embeddings, docs: list[str]) -> list[tuple[str, ndarray]]:
+    def load_embeddings(granularity: str, embeddings, docs: list[Document]) -> list[tuple[str, ndarray]]:
         """
         Embeds docs (list of str), caches and loads vectors for FAISS.
         Returns list of (doc, vector) pairs in original order.
         """
         faiss_cache_path = CACHE_DIR / f"faiss_cache_{granularity}.pkl"
         if faiss_cache_path.exists():
+            texts = [doc.page_content for doc in docs]
             print("[CACHE] Loading FAISS vectors from cache...")
             with open(faiss_cache_path, "rb") as f:
                 vectors = dill.load(f)
-            return list(zip(docs, vectors))
+            return list(zip(texts, vectors))
 
         # Deduplicate while preserving order
-        unique_texts = list(dict.fromkeys(docs))
-        chunk_size = 100_000
-        batch_size = 512
+        unique_texts = []
+        text_to_metadata = {}
+        for doc in docs:
+            text = doc.page_content
+            if text not in text_to_metadata:
+                unique_texts.append(text)
+                text_to_metadata[text] = doc.metadata
+        chunk_size = 100000
+        batch_size = 1024
         embedded = {}
 
         with tqdm(total=len(unique_texts), desc="Embedding unique texts") as pbar:
@@ -81,15 +89,17 @@ class DocumentLoader:
                     embedded.update(zip(batch, batch_vectors))
                     pbar.update(len(batch))
                 except RuntimeError as e:
-                    if "CUDA out of memory" in str(e) and batch_size > 16:
+                    if "CUDA out of memory" in str(e):
                         print(f"[WARN] CUDA OOM at batch_size={batch_size}, retrying with half size")
                         batch_size //= 2
                         continue
                     raise
 
         # Reconstruct full list of vectors in original order
-        vectors = [embedded[t] for t in docs]
+        vectors = [embedded[doc.page_content] for doc in docs]
         with open(faiss_cache_path, "wb") as f:
             dill.dump(vectors, f, protocol=dill.HIGHEST_PROTOCOL)
 
-        return list(zip(docs, vectors))
+        texts = [doc.page_content for doc in docs]
+
+        return list(zip(texts, vectors))
