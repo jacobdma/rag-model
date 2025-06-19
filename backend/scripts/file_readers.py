@@ -62,18 +62,8 @@ class FileReader:
     def __init__(self, _supported_exts, _skip_files):
         self._supported_exts = _supported_exts
         self._skip_files = _skip_files
-
-    def read_file(self, file: Path) -> str | None:
-        filename = str(file)
-        ext = file.suffix.lower()
-        if filename in self._skip_files or ext not in self._supported_exts:
-            return None
-        with open(file, "rb") as f:
-            text = self.read_docs(f, filename, ext)
-
-        return text, filename
-
-    def read_docs(self, f, filename, ext):
+        
+    def read_docs(self, file: Path):
         readers = {
             ".docx": read_docx,
             ".pptx": read_pptx,
@@ -81,5 +71,10 @@ class FileReader:
             ".pdf": lambda f: read_pdf(f, filename),
             ".csv": read_csv,
         }
-        reader = readers.get(ext)
+        filename = str(file)
+        ext = file.suffix.lower()
+        if filename in self._skip_files or ext not in self._supported_exts:
+            return None
+        with open(file, "rb") as f:
+            reader = readers.get(ext)
         return reader(f) if reader else None

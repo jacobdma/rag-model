@@ -103,7 +103,7 @@ class DocumentChunker:
             print(f"[DEBUG] Found {len(all_files)} total files to parse.")
             with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
                  ThreadPoolExecutor(max_workers=16) as executor:
-                futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_file, f): f for f in all_files}
+                futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_docs, f): f for f in all_files}
                 for future in as_completed(futures):
                     try:
                         result = future.result()

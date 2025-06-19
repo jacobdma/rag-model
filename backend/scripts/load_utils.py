@@ -37,8 +37,10 @@ class DocumentLoader:
         self._IGNORE_FOLDERS = {f.lower() for f in self._RAW_IGNORE_FOLDERS}
         self._IGNORE_KEYWORDS = set(config["IGNORE_KEYWORDS"])
 
-    # Gathers all file paths from a folder path
     def gather_supported_files(self, folder_path: str) -> list[Path]:
+        """
+        Gathers all file paths from a specific folder path
+        """
         file_paths = []
         ignore_folders = {str(Path(f)).lower() for f in self._IGNORE_FOLDERS}
         ignore_keywords = {kw.lower() for kw in self._IGNORE_KEYWORDS}
@@ -58,8 +60,8 @@ class DocumentLoader:
     @staticmethod
     def load_embeddings(granularity: str, embeddings, docs: list[Document]) -> list[tuple[str, ndarray]]:
         """
-        Embeds docs (list of str), caches and loads vectors for FAISS.
-        Returns list of (doc, vector) pairs in original order.
+        Embeds docs (list of Documents), caches and loads vectors for FAISS.
+        Returns list of zipped(vector, text) pairs in original order.
         """
         faiss_cache_path = CACHE_DIR / f"faiss_cache_{granularity}.pkl"
         if faiss_cache_path.exists():
@@ -78,10 +80,10 @@ class DocumentLoader:
                 unique_texts.append(text)
                 text_to_metadata[text] = doc.metadata
         chunk_size = 100000
-        batch_size = 1024
+        batch_size = 512
         embedded = {}
 
-        with tqdm(total=len(unique_texts), desc="Embedding unique texts") as pbar:
+        with tqdm(total=len(unique_texts), desc="Embedding unique texts at {granularity} granularity") as pbar:
             for i in range(0, len(unique_texts), chunk_size):
                 batch = unique_texts[i:i + chunk_size]
                 try:

@@ -18,16 +18,19 @@ def get_llm_engine():
 class LLMEngine:
     def __init__(self, token: str | None = None):
         self.token = token
-        self._model_large = None
-        self._tokenizer_large = None
+        self._model = None
+        self._tokenizer = None
 
     def _load_model(self, model_name: str):
-        if self._model_large is None or self._tokenizer_large is None:
-            self._tokenizer_large = AutoTokenizer.from_pretrained(model_name, token=self.token)
+        """
+        Loads and caches model and tokenizer
+        """
+        if self._model is None or self._tokenizer is None:
+            self._tokenizer = AutoTokenizer.from_pretrained(model_name, token=self.token)
             print(f">>> Loading model {model_name}")
             start = time.time()
 
-            self._model_large = AutoModelForCausalLM.from_pretrained(
+            self._model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 token=self.token,
                 low_cpu_mem_usage=True,
@@ -35,9 +38,12 @@ class LLMEngine:
                 torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
             )
             print(f">>> Model loaded in {(time.time() - start):.2f}s")
-        return self._model_large, self._tokenizer_large
+        return self._model, self._tokenizer
     
     def prompt(self, prompt: str, max_new_tokens: int = 384, temperature: float = 0.2, stream: bool = False) -> TextIteratorStreamer | str:
+        """
+        Prompts cached model and returns output with optional streaming bool
+        """
         model, tokenizer = self._load_model(ModelConfig.MODEL)
         device = "cuda" if torch.cuda.is_available() else "cpu"
         inputs = tokenizer(prompt, return_tensors="pt")

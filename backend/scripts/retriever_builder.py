@@ -14,6 +14,7 @@ from .llm_utils import LLMEngine
 from .load_utils import DocumentLoader
 
 class RetrieverBuilder:
+    # Dict of retriever granularities with granularity, size, and overlap
     GRANULARITIES = {
         "small": (512, 50),
         "medium": (1024, 100),
@@ -29,6 +30,9 @@ class RetrieverBuilder:
         self.chunker = DocumentChunker(self.folder_paths)
 
     def _get_missing_retrievers(self):
+        """
+        Gathers missing retrievers 
+        """
         missing_bm25 = {g for g, path in self.bm25_paths.items() if not os.path.exists(path)}
         missing_faiss = {g for g, path in self.faiss_paths.items() if not os.path.exists(path)}
         return missing_bm25, missing_faiss
