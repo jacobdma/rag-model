@@ -89,12 +89,14 @@ class RAGPipeline:
                 history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
 
             history_chain = history_chain[::-1]
-
+                
             t0 = time.time()
             reformed_query = HybridRetriever.query_reform(query, self.engine.prompt)
             self._log_time(t0, "[Pipeline] Query reformulation took")
             print(f"[DEBUG] Reformulated query: {reformed_query}")
-
+            
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             context = self._hybrid_retriever.retrieve_context(reformed_query, hybrid_retriever, max_results=5)
 
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
@@ -113,6 +115,8 @@ class RAGPipeline:
                 web_context=format_block("Web Context", web_results),
                 question=query.strip()
             )
+
+            print(f"\n\n\n Prompt:\n{prompt}\n\n")
 
             # Stream LLM output
             streamer = self.engine.prompt(

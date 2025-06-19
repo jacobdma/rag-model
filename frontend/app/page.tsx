@@ -27,6 +27,8 @@ export default function Chat() {
   const [token, setToken] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [showLoginForm, setShowLoginForm] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+const [streamController, setStreamController] = useState<AbortController | null>(null);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -89,23 +91,24 @@ export default function Chat() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
-    const userMessage: Message = { role: "user", content: input }
+  e.preventDefault();
+  if (!input.trim()) return;
+  const userMessage: Message = { role: "user", content: input };
 
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
-        chat.id === activeChatId
-          ? {
-              ...chat,
-              history: [...chat.history, { role: "user", content: input }],
-            }
-          : chat
-      )
+  setChats((prevChats) =>
+    prevChats.map((chat) =>
+      chat.id === activeChatId
+        ? { ...chat, history: [...chat.history, userMessage] }
+        : chat
     )
+  );
 
-    setInput("")
-    setIsLoading(true)
+  setInput("");
+  setIsLoading(true);
+  setIsStreaming(true);
+
+  const controller = new AbortController();
+  setStreamController(controller);
 
 
     try {
@@ -119,11 +122,11 @@ export default function Chat() {
           use_double_retrievers: useDoubleRetrievers, 
           chat_id: activeChatId
         }),
+        signal: controller.signal,
       })
       if (!response.ok || !response.body) throw new Error("Failed to get response")
 
       let assistantMessage = ""
-      // Add an empty assistant message first
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat.id === activeChatId
@@ -157,20 +160,41 @@ export default function Chat() {
           )
         )
       }
-    } catch (err) {
-      console.error("Error:", err)
-      setChats((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === activeChatId
-            ? {
-                ...chat,
-                history: [...chat.history, { role: "assistant", content: "Sorry, there was an error processing your request." }],
-              }
-            : chat
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === activeChatId
+              ? {
+                  ...chat,
+                  history: chat.history.map((msg, idx) =>
+                    idx === chat.history.length - 1 && msg.role === "assistant"
+                      ? { ...msg, content: "[Stopped]" }
+                      : msg
+                  ),
+                }
+              : chat
+          )
         )
-      )
+      } else {
+        setChats((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === activeChatId
+              ? {
+                  ...chat,
+                  history: [
+                    ...chat.history,
+                    { role: "assistant", content: "Sorry, there was an error processing your request." },
+                  ],
+                }
+              : chat
+          )
+        )
+      }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
+      setIsStreaming(false);
+      setStreamController(null);
     }
   }
   const isEmpty = history.length === 0
@@ -218,7 +242,7 @@ export default function Chat() {
         onClick={() => setShowLoginForm(true)}
         title={username ? "Switch account" : "Sign in"}
       >
-        {username ? `${username}` : "Sign In"}
+        {username ? `Signed in as ${username}` : "Sign In"}
       </div>
       <SettingsMenu
         useDoubleRetrievers={useDoubleRetrievers}
@@ -252,6 +276,12 @@ export default function Chat() {
               useWebSearch={useWebSearch}
               setUseWebSearch={setUseWebSearch}
               onSubmit={handleSubmit}
+              isStreaming={isStreaming}
+              onStop={() => {
+                if (streamController) {
+                  streamController.abort();
+                }
+              }}
             />
         </div>
         {isEmpty && (

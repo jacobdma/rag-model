@@ -37,11 +37,8 @@ class HybridRetriever:
                     except Exception as e:
                         print(f"[Pipeline] Retriever failed: {e}")
 
-            flat_results = []
-            for docs in results:
-                flat_results.extend(docs)
-
-            for doc in flat_results:
+            for doc in results:
+                print(doc)
                 content = doc.page_content
                 if not self._filter_chunk(content):
                     continue

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useRef, useEffect } from "react"
-import { Search, ArrowUp } from "lucide-react"
+import { Search, ArrowUp, Square } from "lucide-react"
 
 export interface Message {
   role: "user" | "assistant"
@@ -59,7 +59,7 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
   )
 }
 
-export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebSearch, onSubmit }: any) {
+export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebSearch, onSubmit, isStreaming, onStop }: any) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   useEffect(() => {
             const textarea = textareaRef.current
@@ -76,7 +76,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
       dark:border-neutral-700 
       p-2
       rounded-3xl
-      shadow-lg 
+      shadow-xl 
       mt-4
       ">
         <textarea
@@ -129,21 +129,23 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
             <Search size={20}/>
             <span className="text-sm font-semibold">Search</span>
           </button>
-          <button
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="p-2 rounded-full bg-red-500 w-10 h-10 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
+            >
+              <Square size={20} fill="white"/>
+            </button>
+          ) : (
+            <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="
-              p-2 rounded-full
-              bg-green-500 
-              w-10 h-10
-              text-white
-              font-semibold 
-              hover:bg-green-600
-              flex items-center justify-center
-              "
+              className="p-2 rounded-full bg-green-500 w-10 h-10 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
             >
-              <ArrowUp size={20}/>
-          </button>
+              <ArrowUp size={20} />
+            </button>
+          )}
         </div>
       </div>
     </form>

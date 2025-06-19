@@ -44,7 +44,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
       {open && (
         <ul className="absolute z-2 mt-2 w-full 
         bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700
-        rounded-2xl shadow-lg
+        rounded-2xl shadow-xl
         text-neutral-700 dark:text-neutral-300">
           {options.map((option) => (
             <li

@@ -130,45 +130,50 @@ async def set_config(config: Configuration):
     return {"message": "Config updated", "config": CURRENT_CONFIG}
 
 @app.post("/chat")
-async def stream_query(input: QueryInput, authorization: str = Header(...)):
+async def stream_query(input: QueryInput, authorization: str = Header(...), request: Request = None):
     username = get_username_from_token(authorization.replace("Bearer ", ""))
 
-    # Generate chat_id if not provided
     chat_id = input.chat_id or str(uuid.uuid4())
-    user_message = {"role": "user", "content": input.query}
     assistant_reply = ""
 
-    def token_generator():
+    async def token_generator():
         nonlocal assistant_reply
-        for chunk in pipeline.generate(
+        generator = pipeline.generate(
             input.query,
             input.history,
             input.use_web_search,
             input.use_double_retrievers
-        ):
+        )
+        for chunk in generator:
+            # Check if client disconnected
+            if await request.is_disconnected():
+                print("Client disconnected, stopping generation.")
+                break
             assistant_reply += chunk
             yield chunk
 
-        chats_collection.update_one(
-            {"_id": chat_id},
-            {
-                "$setOnInsert": {
-                    "_id": chat_id,
-                    "username": username,
-                    "timestamp": time.time(),
-                },
-                "$push": {
-                    "history": {
-                        "$each": [
-                            {"role": "user", "content": input.query},
-                            {"role": "assistant", "content": assistant_reply}
-                        ]
+        # Only save if not interrupted
+        if not await request.is_disconnected():
+            chats_collection.update_one(
+                {"_id": chat_id},
+                {
+                    "$setOnInsert": {
+                        "_id": chat_id,
+                        "username": username,
+                        "timestamp": time.time(),
+                    },
+                    "$push": {
+                        "history": {
+                            "$each": [
+                                {"role": "user", "content": input.query},
+                                {"role": "assistant", "content": assistant_reply}
+                            ]
+                        }
                     }
-                }
-            },
-            upsert=True
-        )
-    
+                },
+                upsert=True
+            )
+
     return StreamingResponse(token_generator(), media_type="text/plain")
 
 @app.get("/chats")

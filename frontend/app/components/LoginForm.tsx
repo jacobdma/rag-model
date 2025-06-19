@@ -54,26 +54,26 @@ export default function LoginForm({
         </div>
 
         <input
-          className="w-full p-3 mb-2 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-lg mt-4"
+          className="w-full p-3 mb-2 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-xl mt-4"
           type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
         <input
-          className="w-full p-3 mb-2 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-lg mt-4"
+          className="w-full p-3 mb-2 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-xl mt-4"
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button className="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-3xl shadow-lg mt-4" onClick={handleLogin}>
+        <button className="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-3xl shadow-xl mt-4" onClick={handleLogin}>
           Log In
         </button>
         {/* Continue as guest button */}
         <p className="p-3 text-lg text-center">OR</p>
         <button
-          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-3xl shadow-lg mt-2"
+          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-3xl shadow-xl mt-2"
           onClick={onGuest}
           type="button"
         >
