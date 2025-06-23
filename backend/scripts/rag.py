@@ -71,7 +71,34 @@ class RAGPipeline:
 
         # Try to run pipeline
         try:
-            # 2. Get web search results
+            # 2. Classify prompt as conversational or inquiry
+            classification_prompt = config.CLASSIFICATION_TEMPLATE.format(message=query)
+            classification = self.engine.prompt(
+                prompt=classification_prompt,
+                temperature=0.1
+            )
+
+            if "conversational" in classification:
+                while True:
+                    prompt = config.CHAT_RESPONSE_TEMPLATE.format(message=query).strip() + "\n\nAssistant:"
+                    streamer = self.engine.prompt(prompt=prompt, stream=True)
+
+                    tokens = []
+                    for token in streamer:
+                        tokens.append(token)
+                        yield token
+
+                    full_response = "".join(tokens)
+
+                    # Check for hallucinated dialogue format
+                    if "User:" in full_response or "Assistant:" in full_response:
+                        continue
+                    break
+
+                return
+
+
+            # 3. Get web search results
             web_results = None
             if use_web_search:
                 t0 = time.time()
@@ -79,7 +106,7 @@ class RAGPipeline:
                 web_results = "\n\n".join(web_results_list)
                 self._log_time(t0, "[Pipeline] Bing search took")
 
-            # 3. Get chat history
+            # 4. Get chat history
             history_chain = []
             pairs = [
                 (chat_history[i], chat_history[i + 1])
@@ -91,21 +118,21 @@ class RAGPipeline:
 
             history_chain = history_chain[::-1]
             
-            # 4. Reform query for better retrieval/response
+            # 5. Reform query for better retrieval/response
             t0 = time.time()
             refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
             self._log_time(t0, "[Pipeline] Query reformulation took")
             print(f"[DEBUG] Refined query: {refined_query}")
 
-            # 5. Invokes retrievers to get relevant chunks
+            # 6. Invokes retrievers to get relevant chunks
             context = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5)
 
-            # 6. Cleans up retrieved context
+            # 7. Cleans up retrieved context
             chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
             context = chunker.clean_paragraphs(context, min_length=50, chunk_size=512, chunk_overlap=50)
             context_str = "\n".join([doc.page_content for doc in context])
 
-            # 7. Constructs prompt\
+            # 8. Constructs prompt
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}\n\n" if content else ""
  
@@ -119,7 +146,7 @@ class RAGPipeline:
                 refined_query=format_block("Refined Query", refined_query.strip())
             )
 
-            # 8. Prompts LLM with context
+            # 9. Prompts LLM with context
             streamer = self.engine.prompt(
                 prompt=prompt,
                 temperature=ModelConfig.TEMPERATURE,
@@ -129,5 +156,6 @@ class RAGPipeline:
                 yield token
 
             self._log_time(start_total, "[Pipeline] Total pipeline time:")
+            return
         except Exception as e:
             yield f"\n[Error]: {e}\n"

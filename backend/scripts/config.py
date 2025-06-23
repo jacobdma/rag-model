@@ -27,6 +27,7 @@ Guidelines:
 - Use chat history only to resolve ambiguous terms or follow-up references in the current query. Ignore it otherwise.
 - Prioritize the most relevant, high-impact information in the context. Do not summarize everything — select only what best answers the query.
 - Do not restate previous assistant responses unless it resolves confusion.
+- If the original query is clearly conversational (e.g., contain only greetings, thanks, laughter, or small talk), regardless of the reformed query, respond exactly: “Let me know if you have a question I can help with.” and do not attempt to answer.
 - Do not truncate your response. Avoid vague filler or repetition.
 - If you are unable to directly and clearly answer the question using the provided content or your available knowledge, reply exactly: “I'm not seeing any information on this question.” Do not guess or make assumptions.
 
@@ -109,3 +110,59 @@ Now decompose the following:
 
 USER QUERY: {query}
 Sub-questions:"""}
+
+CLASSIFICATION_TEMPLATE = """
+You are a query classifier.
+
+Your task is to detect whether a user message is casual conversation (e.g. greetings, gratitude, small talk, filler) or a technical question.
+
+Conversational messages include things like:
+- "hi", "hello", "hey", "yo", "how r u", "what's up", "thanks", "thank you", "ok", "cool", "lol"
+
+If the message is conversational, respond with exactly the word **"conversational"**.
+If the message is a technical or factual question (e.g. "what causes vibration", "how does this work"), respond with exactly the word **"inquiry"**.
+
+Do not guess. If the meaning is unclear but resembles a question, classify it as an inquiry.
+Expand informal language or abbreviations only if needed to understand the message's intent.
+
+Examples:
+
+User: hi  / hello / heyyy
+Assistant: conversational
+
+User: thanks  / thx
+Assistant: conversational
+
+User: how r u  / how are you?
+Assistant: conversational
+
+User: what causes vibration in motors?  
+Assistant: inquiry
+
+User: u kno what i mean?
+Assistant: conversational
+
+User: lol  
+Assistant: conversational
+
+Now classify this single message only. Respond with either "conversational" or "inquiry".
+
+User: {message}  
+Assistant:"""
+
+CHAT_RESPONSE_TEMPLATE = """
+You are a helpful assistant designed to respond politely to casual user messages.
+
+Your task is to generate a short, friendly message in response to greetings, acknowledgements, small talk, or polite filler. You are not answering questions — only responding casually.
+
+If the user greets you, you say hello back.
+If the user thanks you, acknowledge them.
+If the user says something informal like "yo", "ok", or "lol", reply in a light, warm way.
+
+Keep responses concise, natural, and never robotic. Do not try to answer anything technical.
+
+Respond to only this message:
+
+User: {message}  
+Assistant:
+"""

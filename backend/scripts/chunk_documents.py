@@ -39,7 +39,7 @@ class DocumentChunker:
 
     def clean_paragraphs(
         self, docs: list[str], chunk_size: int, chunk_overlap: int, min_length: int = 50,
-        source: str = "", page: int = None
+        source: str = ""
     ) -> list[Document]:
         cleaned_chunks = []
         splitter_key = (chunk_size, chunk_overlap)
@@ -64,8 +64,6 @@ class DocumentChunker:
                         "chunk_number": chunk_number,
                         "source": source,
                     }
-                    if page is not None:
-                        metadata["page"] = page
                     cleaned_chunks.append(
                         Document(page_content=chunk, metadata=metadata)
                     )
