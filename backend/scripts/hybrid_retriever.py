@@ -4,11 +4,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Third-party imports
 from langchain.retrievers import EnsembleRetriever
+from langchain_core.documents import Document
 
 # Local imports
 from .config import templates
 
 class HybridRetriever:
+    @staticmethod
     def query_reform(query: str, prompt) -> str:
         """
         Rewrites query through a three stage process
@@ -27,7 +29,7 @@ class HybridRetriever:
 
         return condensed_output
     
-    def retrieve_context(self, query: str, hybrid_retriever: EnsembleRetriever, max_results: int = 20) -> list[str]:
+    def retrieve_context(self, query: str, hybrid_retriever: EnsembleRetriever, max_results: int = 20) -> list[Document]:
         """
         Retrieves content by invoking retrievers in EnsembleRetriever
         """
@@ -38,22 +40,25 @@ class HybridRetriever:
             retrievers = hybrid_retriever.retrievers
             results = []
             with ThreadPoolExecutor() as executor:
-                futures = [executor.submit(retriever.invoke, query) for retriever in retrievers]
-                for future in as_completed(futures):
+                future_to_retriever = {
+                    executor.submit(retriever.invoke, query): retriever
+                    for retriever in retrievers
+                }
+                for future in as_completed(future_to_retriever):
+                    retriever = future_to_retriever[future]
                     try:
-                        docs = future.result()
+                        docs = future.result()  # Documents
                         results.extend(docs)
                     except Exception as e:
-                        print(f"[Pipeline] Retriever failed: {e}")
+                        print(f"[Pipeline] Retriever {retriever} failed: {e}")
 
             for doc in results:
-                print(doc)
                 content = doc.page_content
                 if not self._filter_chunk(content):
                     continue
                 if content not in seen_content:
                     seen_content.add(content)
-                    unique_chunks.append(content)
+                    unique_chunks.append(doc)
         except Exception as e:
             print(f"[Retrieval] Query failed: {e}")
             traceback.print_exc()

@@ -1,4 +1,5 @@
 # Standard library imports
+import json
 import time
 import uuid
 import yaml
@@ -144,8 +145,17 @@ async def stream_query(input: QueryInput, authorization: str = Header(...), requ
             input.use_web_search,
             input.use_double_retrievers
         )
+        first_chunk = next(generator)
+        print("SURROUNDING CHUNKS")
+        for chunk in first_chunk:
+            for c in chunk["surrounding_chunks"]:
+                print(f"{c}\n")
+            print("\n\n")
+        print("SURROUNDING CHUNKS DONE")
+        retrieved_info_list = [c for chunk in first_chunk for c in chunk["surrounding_chunks"]]
+        context_str = f"[CONTEXT START]{json.dumps(retrieved_info_list)}[CONTEXT END]"
+        yield context_str
         for chunk in generator:
-            # Check if client disconnected
             if await request.is_disconnected():
                 print("Client disconnected, stopping generation.")
                 break

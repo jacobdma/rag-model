@@ -70,7 +70,7 @@ export function Sidebar({
         <div className={`
         border border-neutral-300 dark:border-neutral-700
         transition-all duration-200
-        p-2 rounded-3xl  shadow-xl  backdrop-blur-xs
+        p-2 rounded-3xl  shadow-xl  bg-white dark:bg-neutral-900
         ${sidebarOpen ? "translate-x-0 w-72" : "-translate-x-72 w-0"} 
         `}>
           {sidebarOpen && (

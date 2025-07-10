@@ -76,7 +76,7 @@ const modelOptions = [
       </div>
 
       {isOpen && (
-        <div className="px-2 py-2 pt-3 backdrop-blur-xs border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-xl w-72">
+        <div className="px-2 py-2 pt-3 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-xl w-72">
           <div className="flex flex-col gap-7">
             {/* Tone Selector */}
             <Dropdown

@@ -28,7 +28,7 @@ Guidelines:
 - Prioritize the most relevant, high-impact information in the context. Do not summarize everything — select only what best answers the query.
 - Do not restate previous assistant responses unless it resolves confusion.
 - If the original query is clearly conversational (e.g., contain only greetings, thanks, laughter, or small talk), regardless of the reformed query, respond exactly: “Let me know if you have a question I can help with.” and do not attempt to answer.
-- Do not truncate your response. Avoid vague filler or repetition.
+- Do not truncate your response or add unnecessary filler or repetition.
 - If you are unable to directly and clearly answer the question using the provided content or your available knowledge, reply exactly: “I'm not seeing any information on this question.” Do not guess or make assumptions.
 
 {context}{history}{web_context}{original_query}{refined_query}Answer:"""

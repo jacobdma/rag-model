@@ -1,19 +1,17 @@
-"""This script implements the Retrieval-Augmented Generation (RAG) pipeline for interactive question answering."""
-
 # Standard library imports
+import os
 import time
 import yaml
 
 # Third-party imports
 import requests
-import torch
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
+from langchain_core.documents import Document
 from pydantic import BaseModel
 
 # Local imports
-from .chunk_documents import DocumentChunker
 from .llm_utils import get_llm_engine
 from .hybrid_retriever import HybridRetriever
 from .retriever_builder import RetrieverBuilder
@@ -28,16 +26,18 @@ class RAGPipeline:
     def __init__(self):
         self._cached_bm25 = None
         self._cached_vector = None
+        self._chunk_dict = None
         self.engine = get_llm_engine()
         self._hybrid_retriever = HybridRetriever()
         with open("config.yaml", "r") as f:
             config = yaml.safe_load(f)
         self.folder_paths = config["DOCUMENTS"]
 
-    def _get_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS]]:
-        if self._cached_bm25 is None or self._cached_vector is None:
-            self._cached_bm25, self._cached_vector = RetrieverBuilder(self.folder_paths).build_retrievers()
-        return self._cached_bm25, self._cached_vector
+    def _get_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS], dict[str, dict[str, list[Document]]]]:
+        if self._cached_bm25 is None or self._cached_vector is None or self._chunk_dict is None:
+            self._cached_bm25, self._cached_vector, self._chunk_dict = RetrieverBuilder(self.folder_paths).build_retrievers()
+
+        return self._cached_bm25, self._cached_vector, self._chunk_dict
 
     def _search_bing(self, query: str, max_results: int = 5) -> list[str]:
         headers = {"Ocp-Apim-Subscription-Key": config.BING_API_KEY}
@@ -47,6 +47,49 @@ class RAGPipeline:
         if "webPages" in data:
             return [item["snippet"] for item in data["webPages"]["value"][:max_results]]
         return []
+    
+    @staticmethod
+    def get_surrounding_chunks(doc: Document, chunks_by_granularity: dict[str, dict[str, list[Document]]], target_chars: int = 1500) -> list[Document]:
+        granularity = doc.metadata.get("granularity", "")
+        source = doc.metadata.get("source", "")
+        print(f"PRENORM SOURCE: {source}")
+        source = os.path.normpath(source)
+        print(f"POSTNORM SOURCE: {source}")
+        if not granularity or granularity not in chunks_by_granularity:
+            print(f"\nGRANULARITY: {granularity} NOT IN CHUNKS BY GRANULARITY!!!\n")
+            return [doc]
+        if not source or source not in chunks_by_granularity[granularity]:
+            if not source:
+                print("\nNO SOURCE FOUND!!!\n")
+            if source not in chunks_by_granularity[granularity]:
+                print(f"\nSOURCE: {source} NOT IN CBS!!!\n")
+                print(f"Available keys: {list(chunks_by_granularity[granularity].keys())[:5]}")
+                print(f"Total keys in chunks_by_source: {len(chunks_by_granularity[granularity])}")
+            return [doc]
+        chunk_list = chunks_by_granularity[granularity][source]
+        index = doc.metadata.get("chunk_number", 0)
+        print(f"INDEX: {index}")
+        selected = [doc]
+        total_chars = len(chunk_list[index].page_content)
+
+        left = index - 1
+        right = index + 1
+
+        while total_chars < target_chars and (left >= 0 or right < len(chunk_list)):
+            if left >= 0:
+                chunk = chunk_list[left]
+                selected.insert(0, chunk)
+                total_chars += len(chunk.page_content)
+                left -= 1
+            if right < len(chunk_list):
+                chunk = chunk_list[right]
+                selected.append(chunk)
+                total_chars += len(chunk.page_content)
+                right += 1
+            if total_chars >= target_chars:
+                break
+
+        return selected
 
     def _log_time(self, start: float, message: str) -> None:
         print(f"{message} {time.time() - start:.2f} seconds")
@@ -55,18 +98,20 @@ class RAGPipeline:
         """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
         # 1. Load retrievers
-        bm25_retriever, vector_store = self._get_retrievers()
+        bm25_retriever, vector_store, chunk_dict = self._get_retrievers()
         if use_double_retrievers:
             hybrid_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever["small"], 
                         bm25_retriever["large"], 
                         vector_store["small"].as_retriever(), 
-                        vector_store["large"].as_retriever()]
+                        vector_store["large"].as_retriever()],
+                weights=[0.25, 0.25, 0.25, 0.25]
             )
         else:
             hybrid_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever["medium"], 
-                    vector_store["medium"].as_retriever()]
+                retrievers=[bm25_retriever["medium"], 
+                        vector_store["medium"].as_retriever()],
+                weights=[0.5, 0.5]
             )
 
         # Try to run pipeline
@@ -94,9 +139,7 @@ class RAGPipeline:
                     if "User:" in full_response or "Assistant:" in full_response:
                         continue
                     break
-
-                return
-
+                return None
 
             # 3. Get web search results
             web_results = None
@@ -125,21 +168,40 @@ class RAGPipeline:
             print(f"[DEBUG] Refined query: {refined_query}")
 
             # 6. Invokes retrievers to get relevant chunks
-            context = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5)
+            docs = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5) 
 
-            # 7. Cleans up retrieved context
-            chunker = getattr(self, "chunker", DocumentChunker(self.folder_paths))
-            context = chunker.clean_paragraphs(context, min_length=50, chunk_size=512, chunk_overlap=50)
-            context_str = "\n".join([doc.page_content for doc in context])
+            # 7. Get surrounding documents
+            retrieved_info = []
+            context_list = []
+            for doc in docs:
+                print(f"Document granularity: {doc.metadata.get('granularity', 'unknown')}")
+                context_chunks = self.get_surrounding_chunks(doc, chunk_dict)
+                print(f"Surrounding chunks: {len(context_chunks)}")
+                retrieved_info.append({
+                    "retrieved_chunk": {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata
+                    },
+                    "surrounding_chunks": [
+                        {
+                            "content": c.page_content,
+                            "metadata": c.metadata
+                        }
+                        for c in context_chunks
+                    ]
+                })
+                context_list.append(doc.page_content)
+            context = ''.join(context_list)
+            yield retrieved_info
 
             # 8. Constructs prompt
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}\n\n" if content else ""
  
             history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
-
+            context = ''.join(context)
             prompt = config.RESPONSE_PREFIX.format(
-                context=format_block("Context", context_str),
+                context=format_block("Context", context),
                 history=format_block("Chat History", "\n".join(history_lines)),
                 web_context=format_block("Web Context", web_results),
                 original_query=format_block("Original Query", query.strip()),
@@ -156,6 +218,6 @@ class RAGPipeline:
                 yield token
 
             self._log_time(start_total, "[Pipeline] Total pipeline time:")
-            return
+            return None
         except Exception as e:
             yield f"\n[Error]: {e}\n"

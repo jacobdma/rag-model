@@ -2,7 +2,6 @@ import torch
 import time
 from . import config
 from .config import ModelConfig
-from sentence_transformers import SentenceTransformer
 
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 import threading
@@ -12,12 +11,12 @@ _LLM_ENGINE_INSTANCE = None
 def get_llm_engine():
     global _LLM_ENGINE_INSTANCE
     if _LLM_ENGINE_INSTANCE is None:
-        _LLM_ENGINE_INSTANCE = LLMEngine(config.MODEL_TOKEN)
+        _LLM_ENGINE_INSTANCE = LLMEngine()
     return _LLM_ENGINE_INSTANCE
 
 class LLMEngine:
-    def __init__(self, token: str | None = None):
-        self.token = token
+    def __init__(self):
+        self.token = config.MODEL_TOKEN
         self._model = None
         self._tokenizer = None
 
@@ -74,21 +73,3 @@ class LLMEngine:
             outputs = model.generate(**generation_kwargs)
             decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
             return decoded[len(prompt):].strip()
-
-    
-    @staticmethod
-    def load_bge_large_fp16():
-        model_name = "BAAI/bge-large-en-v1.5"
-        if torch.cuda.is_available():
-            model = SentenceTransformer(model_name, device="cuda")
-            model = model.half()
-        else:
-            model = SentenceTransformer(model_name, device="cpu")
-
-        def encode_fn(x, **kwargs):
-            if isinstance(x, list):
-                return model.encode(x, **kwargs)
-            else:
-                return model.encode([x], **kwargs)[0]
-
-        return encode_fn

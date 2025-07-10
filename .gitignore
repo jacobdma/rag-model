@@ -42,8 +42,14 @@ next-env.d.ts
 # local config files files
 backend/__pycache__/
 backend/scripts/__pycache__/
+backend/scripts/sp_reader.py
+backend/scripts/test.py
+backend/scripts/testing.py
 backend/cache/
+backend/downloaded_files/
 backend/indexes/
+backend/sourceless_cache/
+backend/sourceless_indexes/
 backend/logs/
 backend/config.yaml
 env/

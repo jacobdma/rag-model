@@ -8,6 +8,7 @@ import { ChatInput, MessageList, Message } from "@/components/chat"
 import SettingsMenu from "@/components/SettingsMenu"
 import { Sidebar } from "@/components/Sidebar"
 import LoginForm from "@/components/LoginForm"
+import { ContextWindow } from "@/components/ContextWindow"
 
 type ChatSession = {
   id: string
@@ -16,7 +17,6 @@ type ChatSession = {
 }
 
 export default function Chat() {
-  // All hooks at the top!
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [useWebSearch, setUseWebSearch] = useState(false)
@@ -28,7 +28,8 @@ export default function Chat() {
   const [username, setUsername] = useState<string | null>(null)
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-const [streamController, setStreamController] = useState<AbortController | null>(null);
+  const [streamController, setStreamController] = useState<AbortController | null>(null);
+  const [contextData, setContextData] = useState<any>(null);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -143,7 +144,22 @@ const [streamController, setStreamController] = useState<AbortController | null>
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        const chunk = decoder.decode(value)
+        let chunk = decoder.decode(value)
+        if (chunk.includes("[CONTEXT START]")) {
+          let contextData = null
+          const start = chunk.indexOf("[CONTEXT START]");
+          const end = chunk.indexOf("[CONTEXT END]");
+          const jsonStr = chunk.substring(start + 15, end);
+          console.log("EXTRACTED JSON STRING:", jsonStr);
+          try {
+            const parsed = JSON.parse(jsonStr);
+            console.log("PARSED CONTEXT DATA:", parsed);
+            setContextData(parsed);
+          } catch (err) {
+            console.warn("Failed to parse context data:", err);
+          }
+          chunk = chunk.replace(/\[CONTEXT START\][\s\S]*?\[CONTEXT END\]/, "");
+        }
         assistantMessage += chunk
         setChats((prevChats) =>
           prevChats.map((chat) =>
@@ -267,7 +283,7 @@ const [streamController, setStreamController] = useState<AbortController | null>
                 </p>
               </div>
             )}
-
+            <ContextWindow contextChunks={contextData} />            
             <MessageList messages={history} isLoading={isLoading} />
             <ChatInput
               input={input}
