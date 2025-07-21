@@ -64,6 +64,12 @@ def read_csv(f):
             f = StringIO(f.decode("utf-8"))
         return pd.read_csv(f).to_string(index=False)
     except Exception:
+        # Wrap in StringIO
+        if not isinstance(f, StringIO):
+            if isinstance(f, (bytes, bytearray)):
+                f = StringIO(f.decode("latin1"))
+            else:
+                f = StringIO(str(f))
         f.seek(0)
         return pd.read_csv(f, encoding="latin1").to_string(index=False)
 
@@ -87,4 +93,6 @@ class FileReader:
         with open(file, "rb") as f:
             file_bytes = f.read()
         reader = readers.get(ext)
-        return reader(file_bytes), filename if reader else None
+        if reader is None:
+            return None, filename
+        return reader(file_bytes), filename

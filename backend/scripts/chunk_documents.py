@@ -113,16 +113,17 @@ class DocumentChunker:
                 all_files.extend(self.loader.gather_supported_files(folder))
             print(f"[DEBUG] Found {len(all_files)} total files to parse.")
             with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
-                 ThreadPoolExecutor(max_workers=16) as executor:
+                 ThreadPoolExecutor(max_workers=32) as executor:
                 futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_docs, f): f for f in all_files}
                 for future in as_completed(futures):
                     try:
                         result = future.result()
-                        if result:
-                            text, filename = result
-                            if filename is not None:
-                                filename = os.path.normpath(filename)
-                            raw_documents.append((text, filename))
+                        if result is None:
+                            continue
+                        text, filename = result
+                        if filename is not None:
+                            filename = os.path.normpath(filename)
+                        raw_documents.append((text, filename))
                     except Exception as e:
                         logging.exception(f"[Thread Error] {e}")
                     pbar.update(1)
@@ -165,17 +166,17 @@ class DocumentChunker:
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(
-                    {
-                        source: [
-                            {"page_content": doc.page_content, "metadata": doc.metadata}
-                            for doc in chunk_list
-                        ]
-                        for source, chunk_list in chunks_by_source.items()
-                    },
-                    f,
-                    indent=2,
-                    ensure_ascii=False,
-                )
+                {
+                    source: [
+                        {"page_content": doc.page_content, "metadata": doc.metadata}
+                        for doc in chunk_list
+                    ]
+                    for source, chunk_list in chunks_by_source.items()
+                },
+                f,  
+                indent=2,
+                ensure_ascii=False,
+            )
         except Exception as e:
             print(f"[WARN] Failed to cache parsed docs: {e}")
 

@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from pymongo import MongoClient
 
 # Local imports
-from .rag import RAGPipeline
+from .rag import RAGPipeline, Message
 from .config import ModelConfig
 from .llm_utils import get_llm_engine
 
@@ -71,10 +71,6 @@ class LoginData(BaseModel):
     username: str
     password: str
 
-class Message(BaseModel):
-    role: str
-    content: str
-
 class QueryInput(BaseModel):
     query: str
     history: list[Message] = []
@@ -105,7 +101,10 @@ def get_username_from_token(token: str) -> str:
     token = token.replace("Bearer ", "")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload.get("sub")
+        sub = payload.get("sub")
+        if sub is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return sub
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -131,7 +130,7 @@ async def set_config(config: Configuration):
     return {"message": "Config updated", "config": CURRENT_CONFIG}
 
 @app.post("/chat")
-async def stream_query(input: QueryInput, authorization: str = Header(...), request: Request = None):
+async def stream_query(input: QueryInput, request: Request, authorization: str = Header(...)):
     username = get_username_from_token(authorization.replace("Bearer ", ""))
 
     chat_id = input.chat_id or str(uuid.uuid4())
@@ -145,21 +144,24 @@ async def stream_query(input: QueryInput, authorization: str = Header(...), requ
             input.use_web_search,
             input.use_double_retrievers
         )
-        first_chunk = next(generator)
-        print("SURROUNDING CHUNKS")
-        for chunk in first_chunk:
-            for c in chunk["surrounding_chunks"]:
-                print(f"{c}\n")
-            print("\n\n")
-        print("SURROUNDING CHUNKS DONE")
-        retrieved_info_list = [c for chunk in first_chunk for c in chunk["surrounding_chunks"]]
-        context_str = f"[CONTEXT START]{json.dumps(retrieved_info_list)}[CONTEXT END]"
-        yield context_str
+        first_yield = next(generator)
+        if isinstance(first_yield, list):
+            print("SURROUNDING CHUNKS")
+            for chunk in first_yield:
+                for c in chunk["surrounding_chunks"]:
+                    print(f"{c}\n")
+                print("\n\n")
+            print("SURROUNDING CHUNKS DONE")
+            retrieved_info_list = [c for chunk in first_yield for c in chunk["surrounding_chunks"]]
+            context_str = f"[CONTEXT START]{json.dumps(retrieved_info_list)}[CONTEXT END]"
+            yield context_str
+        else:  # String token
+            yield first_yield
         for chunk in generator:
             if await request.is_disconnected():
                 print("Client disconnected, stopping generation.")
                 break
-            assistant_reply += chunk
+            assistant_reply += str(chunk)
             yield chunk
 
         # Only save if not interrupted
@@ -184,7 +186,11 @@ async def stream_query(input: QueryInput, authorization: str = Header(...), requ
                 upsert=True
             )
 
-    return StreamingResponse(token_generator(), media_type="text/plain")
+    async def string_generator():
+        async for item in token_generator():
+            yield str(item)
+    
+    return StreamingResponse(string_generator(), media_type="text/plain")
 
 @app.get("/chats")
 async def get_chats(authorization: str = Header(...)):

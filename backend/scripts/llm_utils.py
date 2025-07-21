@@ -3,7 +3,8 @@ import time
 from . import config
 from .config import ModelConfig
 
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers.generation.streamers import TextIteratorStreamer
 import threading
 
 _LLM_ENGINE_INSTANCE = None
@@ -65,8 +66,7 @@ class LLMEngine:
         )
         if stream:
             streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-            generation_kwargs.update(streamer=streamer)
-            thread = threading.Thread(target=model.generate, kwargs=generation_kwargs)
+            thread = threading.Thread(target=lambda: model.generate(streamer=streamer, **generation_kwargs))
             thread.start()
             return streamer
         else:

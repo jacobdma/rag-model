@@ -49,24 +49,12 @@ class RAGPipeline:
         return []
     
     @staticmethod
-    def get_surrounding_chunks(doc: Document, chunks_by_granularity: dict[str, dict[str, list[Document]]], target_chars: int = 1500) -> list[Document]:
-        granularity = doc.metadata.get("granularity", "")
+    def get_surrounding_chunks(doc: Document, chunks_by_source: dict[str, list[Document]], target_chars: int = 1500) -> list[Document]:
         source = doc.metadata.get("source", "")
-        print(f"PRENORM SOURCE: {source}")
         source = os.path.normpath(source)
-        print(f"POSTNORM SOURCE: {source}")
-        if not granularity or granularity not in chunks_by_granularity:
-            print(f"\nGRANULARITY: {granularity} NOT IN CHUNKS BY GRANULARITY!!!\n")
+        if not source or source not in chunks_by_source:
             return [doc]
-        if not source or source not in chunks_by_granularity[granularity]:
-            if not source:
-                print("\nNO SOURCE FOUND!!!\n")
-            if source not in chunks_by_granularity[granularity]:
-                print(f"\nSOURCE: {source} NOT IN CBS!!!\n")
-                print(f"Available keys: {list(chunks_by_granularity[granularity].keys())[:5]}")
-                print(f"Total keys in chunks_by_source: {len(chunks_by_granularity[granularity])}")
-            return [doc]
-        chunk_list = chunks_by_granularity[granularity][source]
+        chunk_list = chunks_by_source[source]
         index = doc.metadata.get("chunk_number", 0)
         print(f"INDEX: {index}")
         selected = [doc]
@@ -172,25 +160,86 @@ class RAGPipeline:
 
             # 7. Get surrounding documents
             retrieved_info = []
-            context_list = []
+            context_groups = []  # Each group: dict with keys: 'source', 'granularity', 'chunks', 'content_set', 'total_len', 'original_order', 'metadata_list'
+            group_counter = 0
             for doc in docs:
-                print(f"Document granularity: {doc.metadata.get('granularity', 'unknown')}")
-                context_chunks = self.get_surrounding_chunks(doc, chunk_dict)
-                print(f"Surrounding chunks: {len(context_chunks)}")
+                context_chunks = self.get_surrounding_chunks(doc, chunk_dict[doc.metadata["granularity"]])
+                # Group by contiguous chunks from the same source and granularity
+                if not context_chunks:
+                    continue
+                source = os.path.normpath(context_chunks[0].metadata.get("source", ""))
+                granularity = context_chunks[0].metadata.get("granularity", "")
+                chunk_numbers = [c.metadata.get("chunk_number", 0) for c in context_chunks]
+                # Use tuple of (source, min_chunk, max_chunk, granularity) as group id
+                group_id = (source, min(chunk_numbers), max(chunk_numbers), granularity)
+                group_content = "".join([c.page_content for c in context_chunks])
+                content_set = set()
+                for c in context_chunks:
+                    content_set.update(c.page_content.splitlines())
+                context_groups.append({
+                    "group_id": group_id,
+                    "source": source,
+                    "granularity": granularity,
+                    "chunks": context_chunks,
+                    "content": group_content,
+                    "content_set": set(group_content),
+                    "total_len": len(group_content),
+                    "original_order": group_counter,
+                    "metadata_list": [c.metadata for c in context_chunks],
+                })
+                group_counter += 1
+
+            # Deduplicate groups per source
+            from collections import defaultdict
+            source_to_groups = defaultdict(list)
+            for group in context_groups:
+                source_to_groups[group["source"]].append(group)
+
+            deduped_groups = []
+            for source, groups in source_to_groups.items():
+                # Compare all pairs of groups for overlap/containment
+                to_remove = set()
+                n = len(groups)
+                for i in range(n):
+                    for j in range(n):
+                        if i == j or i in to_remove or j in to_remove:
+                            continue
+                        g1 = groups[i]
+                        g2 = groups[j]
+                        # If g1's content is fully contained in g2, and g2 is longer, remove g1
+                        if g1["content"] in g2["content"] and g2["total_len"] > g1["total_len"]:
+                            to_remove.add(i)
+                        # If g2's content is fully contained in g1, and g1 is longer, remove g2
+                        elif g2["content"] in g1["content"] and g1["total_len"] > g2["total_len"]:
+                            to_remove.add(j)
+                        # If g1 and g2 overlap, but together g1+g2 covers more unique content than either alone, keep both
+                        # If g1 and g2 overlap, but one is a strict superset, remove the subset
+                        # (Handled above)
+                for idx, group in enumerate(groups):
+                    if idx not in to_remove:
+                        deduped_groups.append(group)
+
+            # Sort deduped groups by original order
+            deduped_groups.sort(key=lambda g: g["original_order"])
+
+            # Build retrieved_info and context_list from deduped groups
+            retrieved_info = []
+            context_list = []
+            for group in deduped_groups:
                 retrieved_info.append({
                     "retrieved_chunk": {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata
+                        "content": group["chunks"][0].page_content,
+                        "metadata": group["chunks"][0].metadata
                     },
                     "surrounding_chunks": [
                         {
                             "content": c.page_content,
                             "metadata": c.metadata
                         }
-                        for c in context_chunks
+                        for c in group["chunks"]
                     ]
                 })
-                context_list.append(doc.page_content)
+                context_list.append(group["content"])
             context = ''.join(context_list)
             yield retrieved_info
 

@@ -1,6 +1,7 @@
 # Standard library imports
 import os
 import time
+import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Library specific imports
@@ -45,41 +46,50 @@ class RetrieverBuilder:
         if not docs:
             print(f"[WARN] No documents to embed for granularity {granularity}. Skipping FAISS build.")
             return
+        
+        # Get embeddings for unique documents
         text_embeddings = self.load_embeddings(granularity, embeddings, docs)
         if not text_embeddings:
             print(f"[WARN] No embeddings generated for granularity {granularity}. Skipping FAISS build.")
             return
         
-        # Extract texts and vectors from the embeddings
-        texts, vectors = zip(*text_embeddings)
+        print(f"[FAISS] Building index for {granularity} granularity with {len(text_embeddings)} documents")
         
-        # Create metadata for deduplicated texts
-        # We need to reconstruct metadata for the deduplicated texts
-        unique_metadata = []
-        seen_texts = set()
-        for doc in docs:
-            text = doc.page_content
-            if text not in seen_texts:
-                unique_metadata.append(doc.metadata)
-                seen_texts.add(text)
+        torch.cuda.empty_cache()
+        # Process in smaller batches to avoid memory issues
+        batch_size = 10000  # Reduced batch size for memory safety
+        all_metadatas = [doc.metadata for doc in docs]
         
-        # Add vectors to FAISS in batches to prevent memory errors
-        batch_size = 10000  # Adjust this value based on your memory constraints
-        faiss_store = None
+        # Create initial FAISS store with first batch
+        first_batch = text_embeddings[:batch_size]
+        first_metadatas = all_metadatas[:batch_size]
+        faiss_store = FAISS.from_embeddings(first_batch, embedding=embeddings, metadatas=first_metadatas)
         
-        for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i:i + batch_size]
-            batch_vectors = vectors[i:i + batch_size]
-            batch_metadata = unique_metadata[i:i + batch_size]
-            batch_embeddings = list(zip(batch_texts, batch_vectors))
+        # Add remaining batches incrementally
+        for i in range(batch_size, len(text_embeddings), batch_size):
+            batch = text_embeddings[i:i + batch_size]
+            batch_metadatas = all_metadatas[i:i + batch_size]
             
-            if faiss_store is None:
-                faiss_store = FAISS.from_embeddings(batch_embeddings, embedding=embeddings, metadatas=batch_metadata)
-            else:
-                faiss_store.add_embeddings(batch_embeddings, metadatas=batch_metadata)
+            batch_text_embeddings = list(zip([item[0] for item in batch], [item[1] for item in batch]))
+            faiss_store.add_embeddings(
+                text_embeddings=batch_text_embeddings,
+                metadatas=batch_metadatas
+            )
+            
+            print(f"[FAISS] Processed batch {i//batch_size + 1}/{(len(text_embeddings) + batch_size - 1)//batch_size}")
+            del batch, batch_metadatas
+            gc.collect()
+
+        print(f"[FAISS] Saving index to {path}")
+        del text_embeddings, all_metadatas
+        gc.collect()
         
         if faiss_store is not None:
             faiss_store.save_local(path)
+            del faiss_store
+            gc.collect()
+        
+        print(f"[FAISS] Index for {granularity} granularity saved to {path}")
 
     def _faiss_load(self, path, granularity, embeddings):
         t0 = time.time()
@@ -116,7 +126,10 @@ class RetrieverBuilder:
                 self.build_bm25(docs, self.bm25_paths[granularity])
             if granularity in missing_faiss:
                 self.build_faiss(docs, self.faiss_paths[granularity], granularity, model)
+                # Force garbage collection after each FAISS build
+                gc.collect()
 
+        print("[INFO] All retrievers built successfully.")
         # Load all retrievers in parallel
         with ThreadPoolExecutor(max_workers=8) as executor:
             bm25_futures = [
@@ -160,41 +173,34 @@ class RetrieverBuilder:
             vectors = [v.tolist() if hasattr(v, 'tolist') else v for v in vectors]
             return list(zip(texts, vectors))
 
-        # Deduplicate texts while preserving metadata correspondence
-        unique_texts = []
-        unique_metadata = []
-        seen = set()
-        for doc in docs:
-            text = doc.page_content
-            if text not in seen:
-                unique_texts.append(text)
-                unique_metadata.append(doc.metadata)
-                seen.add(text)
-        chunk_size = 50000
+        # Extract texts from documents (docs are already deduplicated)
+        texts = [doc.page_content for doc in docs]
+        chunk_size = 10000
+        batch_size = 128
 
-        with tqdm(total=len(unique_texts), desc=f"Embedding unique texts at {granularity} granularity") as pbar:
-            with open(faiss_cache_path, "wb") as f:
-                for i in range(0, len(unique_texts), chunk_size):
-                    batch = unique_texts[i:i + chunk_size]
-                    try:
-                        batch_vectors = model.encode(
-                            batch,
-                            batch_size=256,
-                            show_progress_bar=False,
-                            convert_to_numpy=True,
-                            normalize_embeddings=True
-                        )
-                        # Write each batch to disk immediately
-                        dill.dump(batch_vectors, f)
-                        pbar.update(len(batch))
-                        del batch_vectors
-                        gc.collect()
-                    except RuntimeError as e:
-                        if "CUDA out of memory" in str(e):
-                            print(f"[WARN] CUDA OOM at batch_size={batch_size}, retrying with half size")
-                            batch_size //= 2
-                            continue
-                        raise
+        with tqdm(total=len(texts), desc=f"Embedding texts at {granularity} granularity") as pbar \
+             , open(faiss_cache_path, "wb") as f:
+            for i in range(0, len(texts), chunk_size):
+                batch = texts[i:i + chunk_size]
+                try:
+                    batch_vectors = model.encode(
+                        batch,
+                        batch_size=batch_size,
+                        show_progress_bar=False,
+                        convert_to_numpy=True,
+                        normalize_embeddings=True
+                    )
+                    # Write each batch to disk immediately
+                    dill.dump(batch_vectors, f)
+                    pbar.update(len(batch))
+                    del batch_vectors
+                    gc.collect()
+                except RuntimeError as e:
+                    if "CUDA out of memory" in str(e):
+                        print(f"[WARN] CUDA OOM at batch_size={128}, retrying with half size")
+                        batch_size = 64
+                        continue
+                    raise
 
         # Reconstruct full list of vectors in original order by reading all batches from disk
         vectors = []
@@ -207,5 +213,6 @@ class RetrieverBuilder:
                     break
         vectors = [v.tolist() if hasattr(v, 'tolist') else v for v in vectors]
         
-        # Return deduplicated texts with their vectors
-        return list(zip(unique_texts, vectors))
+        # Return texts with their vectors
+        print(f"[COMPLETE] Loaded {len(vectors)} vectors for {granularity} granularity")
+        return list(zip(texts, vectors))
