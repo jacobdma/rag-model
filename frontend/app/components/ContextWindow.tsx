@@ -1,32 +1,85 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
+
+function getFileName(path: string) {
+  if (!path) return "Unknown Source"
+  const parts = path.split(/[/\\]/)
+  return parts[parts.length - 1]
+}
 
 export function ContextWindow({ contextChunks }: { contextChunks: any[] }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Always treat contextChunks as an array
+  const safeChunks = Array.isArray(contextChunks) ? contextChunks : []
+
+  // Automatically open/close popup based on contextChunks
+  useEffect(() => {
+    if (safeChunks.length > 0) {
+      setIsOpen(true)
+    } else {
+      setIsOpen(false)
+      setOpenIndex(null)
+    }
+  }, [contextChunks])
+
+  // Calculate dynamic height
+  const getContentHeight = () => {
+    if (!containerRef.current) return undefined
+    // If a chunk is open, let it grow to max 75vh
+    if (openIndex !== null) {
+      return "max-h-[75vh]"
+    }
+    // Otherwise, shrink to fit previews (min-h for header)
+    return ""
+  }
+
+  if (!isOpen) return null
+
+  // Dynamic height classes
+  const dynamicHeightClass = openIndex !== null ? "max-h-[75vh]" : ""
 
   return (
-    <>
-      <button onClick={() => setIsOpen(true)} className="mt-4 underline text-sm text-blue-600">
-        View Context Chunks
-      </button>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-            <h2 className="text-lg font-semibold mb-4">Retrieved Context</h2>
-            <div className="overflow-y-auto max-h-[60vh] text-sm whitespace-pre-wrap">
-              {contextChunks.map((chunk, i) => (
-                <div key={i} className="mb-4 border-b pb-2">
-                  <div className="text-gray-500 mb-1">Source: {chunk.metadata?.source}</div>
-                  <div className="text-gray-500 mb-1">Chunk: {chunk.metadata?.chunk_number}</div>
-                  <pre>{chunk.content}</pre>
+    <div
+      ref={containerRef}
+      className={`fixed bottom-8 right-8 z-50 w-1/4 flex flex-col border border-neutral-200 dark:border-neutral-700 rounded-3xl shadow-xl bg-white dark:bg-neutral-900 min-h-[5rem] transition-all duration-300 ${dynamicHeightClass}`}
+      style={{ height: "auto" }}
+    >
+      <div className="sticky top-0 flex items-center justify-between px-6 py-4 bg-white dark:bg-neutral-900 rounded-t-3xl border-b border-neutral-200 dark:border-neutral-700 z-10">
+        <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100">Retrieved Context</h2>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {safeChunks.length > 0 ? (
+          safeChunks.map((group, i) => {
+            const fullText = group.surrounding_chunks.map((c: any) => c.content).join("")
+            const preview = fullText.length > 100 ? fullText.slice(0, 100) + "..." : fullText
+            const isExpanded = openIndex === i
+            const fileName = getFileName(group.retrieved_chunk?.metadata?.source)
+            return (
+              <div key={i} className="border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-800">
+                <button
+                  className="w-full text-left px-4 py-3 font-semibold text-blue-700 dark:text-blue-300 rounded-t-xl focus:outline-none hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors flex items-center justify-between"
+                  onClick={() => setOpenIndex(isExpanded ? null : i)}
+                  aria-expanded={isExpanded}
+                >
+                  <span className="truncate max-w-[70%]">{fileName}</span>
+                  <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">{isExpanded ? "Hide" : "Show more"}</span>
+                </button>
+                <div className="px-4 pb-4 pt-2 text-neutral-800 dark:text-neutral-200">
+                  {isExpanded ? (
+                    <div className="whitespace-pre-wrap leading-relaxed">{fullText}</div>
+                  ) : (
+                    <div className="whitespace-pre-wrap leading-relaxed text-neutral-600 dark:text-neutral-300">{preview}</div>
+                  )}
                 </div>
-              ))}
-            </div>
-            <button onClick={() => setIsOpen(false)} className="mt-4 bg-gray-200 px-4 py-1 rounded">
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+              </div>
+            )
+          })
+        ) : (
+          <div className="text-neutral-500 dark:text-neutral-400">No retrieved data</div>
+        )}
+      </div>
+    </div>
   )
 }

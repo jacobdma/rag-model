@@ -189,7 +189,7 @@ class RAGPipeline:
                 })
                 group_counter += 1
 
-            # Deduplicate groups per source
+            # Improved deduplication: remove groups whose content is a strict subset of the union of other groups' content
             from collections import defaultdict
             source_to_groups = defaultdict(list)
             for group in context_groups:
@@ -197,29 +197,53 @@ class RAGPipeline:
 
             deduped_groups = []
             for source, groups in source_to_groups.items():
-                # Compare all pairs of groups for overlap/containment
-                to_remove = set()
-                n = len(groups)
-                for i in range(n):
-                    for j in range(n):
-                        if i == j or i in to_remove or j in to_remove:
+                # Step 1: Remove groups whose content is a strict subset of the union of other groups
+                keep = [True] * len(groups)
+                group_contents = [set(c.page_content for c in g["chunks"]) for g in groups]
+                for i, g1 in enumerate(groups):
+                    g1_content = set(c.page_content for c in g1["chunks"])
+                    union_others = set()
+                    for j, g2 in enumerate(groups):
+                        if i == j:
                             continue
-                        g1 = groups[i]
-                        g2 = groups[j]
-                        # If g1's content is fully contained in g2, and g2 is longer, remove g1
-                        if g1["content"] in g2["content"] and g2["total_len"] > g1["total_len"]:
-                            to_remove.add(i)
-                        # If g2's content is fully contained in g1, and g1 is longer, remove g2
-                        elif g2["content"] in g1["content"] and g1["total_len"] > g2["total_len"]:
-                            to_remove.add(j)
-                        # If g1 and g2 overlap, but together g1+g2 covers more unique content than either alone, keep both
-                        # If g1 and g2 overlap, but one is a strict superset, remove the subset
-                        # (Handled above)
-                for idx, group in enumerate(groups):
-                    if idx not in to_remove:
-                        deduped_groups.append(group)
+                        union_others.update(c.page_content for c in g2["chunks"])
+                    # If all of g1's content is in the union of others, and others have more content, remove g1
+                    if g1_content and g1_content.issubset(union_others) and len(union_others) > len(g1_content):
+                        keep[i] = False
+                filtered_groups = [g for k, g in zip(keep, groups) if k]
 
-            # Sort deduped groups by original order
+                # Step 2: Merge contiguous/overlapping groups
+                def min_chunk(g):
+                    return min(c.metadata["chunk_number"] for c in g["chunks"])
+                filtered_groups.sort(key=min_chunk)
+                merged = []
+                for group in filtered_groups:
+                    group_chunk_numbers = set(c.metadata["chunk_number"] for c in group["chunks"])
+                    if not merged:
+                        merged.append(group)
+                    else:
+                        last = merged[-1]
+                        last_chunk_numbers = set(c.metadata["chunk_number"] for c in last["chunks"])
+                        # Check for overlap or contiguity
+                        if last_chunk_numbers & group_chunk_numbers or (
+                            max(last_chunk_numbers) + 1 >= min(group_chunk_numbers) and min(group_chunk_numbers) <= max(last_chunk_numbers) + 1
+                        ):
+                            # Merge: combine, deduplicate, and sort by chunk_number
+                            all_chunks = last["chunks"] + group["chunks"]
+                            seen = set()
+                            unique_chunks = []
+                            for c in sorted(all_chunks, key=lambda c: c.metadata["chunk_number"]):
+                                num = c.metadata["chunk_number"]
+                                if num not in seen:
+                                    unique_chunks.append(c)
+                                    seen.add(num)
+                            last["chunks"] = unique_chunks
+                            last["content"] = ''.join([c.page_content for c in unique_chunks])
+                        else:
+                            merged.append(group)
+                deduped_groups.extend(merged)
+
+            # Sort deduped groups by original order (first chunk's original order)
             deduped_groups.sort(key=lambda g: g["original_order"])
 
             # Build retrieved_info and context_list from deduped groups

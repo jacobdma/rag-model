@@ -152,8 +152,8 @@ async def stream_query(input: QueryInput, request: Request, authorization: str =
                     print(f"{c}\n")
                 print("\n\n")
             print("SURROUNDING CHUNKS DONE")
-            retrieved_info_list = [c for chunk in first_yield for c in chunk["surrounding_chunks"]]
-            context_str = f"[CONTEXT START]{json.dumps(retrieved_info_list)}[CONTEXT END]"
+            # Send the full group structure, not a flattened list
+            context_str = f"[CONTEXT START]{json.dumps(first_yield)}[CONTEXT END]"
             yield context_str
         else:  # String token
             yield first_yield
