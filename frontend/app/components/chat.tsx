@@ -25,8 +25,6 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
             ? `
               bg-neutral-100                  
               dark:bg-neutral-800
-              border border-neutral-100 
-              dark:border-neutral-900
               text-neutral-700 
               dark:text-neutral-300
               font-medium

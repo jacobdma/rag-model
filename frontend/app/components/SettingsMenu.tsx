@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useRef  } from "react"
-import { Settings2 } from "lucide-react"
+import { Settings2, X } from "lucide-react"
 import Dropdown from "@/components/Dropdown"
 import Slider from "@/components/Slider"
 import Toggle from "@/components/Toggle"
@@ -8,13 +8,16 @@ import Toggle from "@/components/Toggle"
 interface SettingsMenuProps {
   useDoubleRetrievers: boolean;
   setUseDoubleRetrievers: (value: boolean) => void;
+  open: boolean;
+  onClose: () => void;
 }
 
 export default function SettingsMenu({
   useDoubleRetrievers,
   setUseDoubleRetrievers,
+  open,
+  onClose,
 }: SettingsMenuProps) {
-  const [isOpen, setIsOpen] = useState(false)
   const [temperature, setTemperature] = useState(0.00645)
   const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
   const [tone, setTone] = useState("neutral")
@@ -62,22 +65,37 @@ const modelOptions = [
     })
     }, [temperature, model, tone])
 
-  return (
-    <div className="absolute top-3 right-3">
-      <div className="flex justify-end mb-3">
-        <button
-          className="p-2 rounded-3xl flex items-center gap-2 
-          text-neutral-700 dark:text-neutral-300 font-semibold 
-          hover:bg-neutral-200 dark:hover:bg-neutral-800"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <Settings2 size={20} />
-        </button>
-      </div>
+  const modalRef = useRef<HTMLDivElement>(null)
 
-      {isOpen && (
-        <div className="px-2 py-2 pt-3 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-3xl shadow-xl w-72">
-          <div className="flex flex-col gap-7">
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (open && modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClick)
+    }
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [open, onClose])
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Blurred overlay */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[6px]" />
+      <div ref={modalRef} className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-8 z-10">
+        <button
+          className="absolute top-4 right-4 text-neutral-400 hover:text-red-500 text-xl font-bold rounded-full p-1 focus:outline-none"
+          onClick={onClose}
+          title="Close"
+        >
+          <X />
+        </button>
+        {/* Settings form content (unchanged) */}
+        <div className="flex flex-col gap-7">
             {/* Tone Selector */}
             <Dropdown
               label="Tone"
@@ -112,7 +130,6 @@ const modelOptions = [
             />
           </div>
         </div>
-      )}
-    </div>
-  )
-}
+      </div>
+    )
+  }

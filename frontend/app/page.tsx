@@ -30,6 +30,7 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamController, setStreamController] = useState<AbortController | null>(null);
   const [contextData, setContextData] = useState<any>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -238,6 +239,16 @@ export default function Chat() {
     }
   }, [history, activeChatId])
 
+  function handleSignIn() {
+    setShowLoginForm(true);
+  }
+  function handleSignOut() {
+    setToken(null);
+    setUsername(null);
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("username");
+  }
+
   return showLoginForm
   ? <LoginForm
       onLogin={(tok, user) => {
@@ -249,20 +260,11 @@ export default function Chat() {
     />
   : (
     <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden">
-      <div
-        className={`absolute top-4 left-4 z-50 px-3 py-2 rounded-3xl flex items-center gap-2 
-          text-neutral-700 dark:text-neutral-300 font-semibold ${username 
-            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700" 
-            : "text-white bg-green-500 hover:bg-green-600"
-          }`}
-        onClick={() => setShowLoginForm(true)}
-        title={username ? "Switch account" : "Sign in"}
-      >
-        {username ? `Signed in as ${username}` : "Sign In"}
-      </div>
       <SettingsMenu
         useDoubleRetrievers={useDoubleRetrievers}
         setUseDoubleRetrievers={setUseDoubleRetrievers}
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
 
       <div className="flex h-screen">
@@ -274,6 +276,10 @@ export default function Chat() {
           setChats={setChats}
           setSidebarOpen={setSidebarOpen}
           currentChatIsEmpty={currentChatIsEmpty}
+          username={username}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
         <div className={`w-full p-4 h-screen flex flex-col items-center ${isEmpty ? "justify-center" : ""}`}>
             {isEmpty && (
