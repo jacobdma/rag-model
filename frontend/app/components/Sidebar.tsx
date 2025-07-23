@@ -207,7 +207,7 @@ export function Sidebar({
   return (
     <>
       {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-[7vw] bg-neutral-100 dark:bg-neutral-800 z-40 flex flex-col">
+      <div className="fixed inset-y-0 left-0 w-[4vw] bg-neutral-100 dark:bg-neutral-800 z-40 flex flex-col">
         {sidebarContent}
       </div>
 
