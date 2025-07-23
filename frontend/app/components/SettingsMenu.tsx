@@ -22,19 +22,19 @@ export default function SettingsMenu({
   const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
   const [tone, setTone] = useState("neutral")
 
-const temperatureStops = [
-  { value: 0.00645, label: "Precise" },
-  { value: 0.09516, label: "Technical" },
-  { value: 0.18387, label: "Focused" },
-  { value: 0.27258, label: "Balanced" },
-  { value: 0.36129, label: "Flexible" },
-  { value: 0.45, label: "Creative" }
-]
+  const temperatureStops = [
+    { value: 0.00645, label: "Precise" },
+    { value: 0.09516, label: "Technical" },
+    { value: 0.18387, label: "Focused" },
+    { value: 0.27258, label: "Balanced" },
+    { value: 0.36129, label: "Flexible" },
+    { value: 0.45, label: "Creative" }
+  ]
 
-function getTemperatureLabel(value: number): string {
-  const match = temperatureStops.find((stop) => stop.value === value)
-  return match ? match.label : "Unknown"
-}
+  function getTemperatureLabel(value: number): string {
+    const match = temperatureStops.find((stop) => stop.value === value)
+    return match ? match.label : "Unknown"
+  }
 
   // ✅ Sync config
   useEffect(() => {
@@ -46,24 +46,15 @@ function getTemperatureLabel(value: number): string {
     })
   }, [temperature, model, tone])
 
-const toneOptions = [
-  { label: "Formal", value: "formal" },
-  { label: "Neutral", value: "neutral" },
-  { label: "Casual", value: "casual" },
-]
+  const toneOptions = [
+    { label: "Formal", value: "formal" },
+    { label: "Neutral", value: "neutral" },
+    { label: "Casual", value: "casual" },
+  ]
 
-const modelOptions = [
-    { label: "Mistral", value: "mistralai/Mistral-7B-Instruct-v0.1"},
-]
-
-  useEffect(() => {
-    const config = { temperature, model, tone }
-    fetch("http://localhost:8000/set-config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
-    })
-    }, [temperature, model, tone])
+  const modelOptions = [
+      { label: "Mistral", value: "mistralai/Mistral-7B-Instruct-v0.1"},
+  ]
 
   const modalRef = useRef<HTMLDivElement>(null)
 
@@ -94,42 +85,48 @@ const modelOptions = [
         >
           <X />
         </button>
-        {/* Settings form content (unchanged) */}
+        
+        <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 mb-6">
+          Settings
+        </h2>
+        
+        {/* Settings form content */}
         <div className="flex flex-col gap-7">
-            {/* Tone Selector */}
-            <Dropdown
-              label="Tone"
-              options={toneOptions}
-              value={tone}
-              onChange={setTone}
-            />
+          {/* Tone Selector */}
+          <Dropdown
+            label="Tone"
+            options={toneOptions}
+            value={tone}
+            onChange={setTone}
+          />
 
-            {/* Model Selector */}
-            <Dropdown
-                label="Model"
-                options={modelOptions}
-                value={model}
-                onChange={setModel}
-            />
+          {/* Model Selector */}
+          <Dropdown
+              label="Model"
+              options={modelOptions}
+              value={model}
+              onChange={setModel}
+          />
 
-            {/* Temperature Slider */}
-            <Slider
-              label="Response Style"
-              value={temperature}
-              min={0.00645}
-              max={0.45}
-              step={0.08871}
-              onChange={setTemperature}
-              displayValue={getTemperatureLabel(temperature)}
-            />
-            {/* Example Toggle usage */}
-            <Toggle
-              checked={useDoubleRetrievers}
-              onChange={setUseDoubleRetrievers}
-              label="Double Retrievers"
-            />
-          </div>
+          {/* Temperature Slider */}
+          <Slider
+            label="Response Style"
+            value={temperature}
+            min={0.00645}
+            max={0.45}
+            step={0.08871}
+            onChange={setTemperature}
+            displayValue={getTemperatureLabel(temperature)}
+          />
+          
+          {/* Example Toggle usage */}
+          <Toggle
+            checked={useDoubleRetrievers}
+            onChange={setUseDoubleRetrievers}
+            label="Double Retrievers"
+          />
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+}

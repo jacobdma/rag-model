@@ -42,8 +42,7 @@ export function ContextWindow({ contextChunks }: { contextChunks: any[] }) {
   return (
     <div
       ref={containerRef}
-      className={`fixed bottom-0 right-0 z-40 w-[18vw] max-w-[18vw] min-w-[200px] flex flex-col bg-neutral-100 dark:bg-neutral-800 max-h-full min-h-[5rem] p-2`}
-      style={{ height: "auto" }}
+      className={`fixed top-0 right-0 z-40 w-[25vw] min-w-[200px] flex flex-col bg-neutral-100 dark:bg-neutral-800 h-screen min-h-[5rem] p-2`}
     >
       <div className="sticky top-0 flex items-center justify-between px-6 py-4 bg-neutral-100 dark:bg-neutral-800 z-10">
         <h2 className="text-responsive-sm font-medium text-neutral-800 dark:text-neutral-100">Retrieved Context</h2>
@@ -62,7 +61,6 @@ export function ContextWindow({ contextChunks }: { contextChunks: any[] }) {
                   onClick={() => setOpenIndex(isExpanded ? null : i)}
                   aria-expanded={isExpanded}
                 >
-                  {/* Top row: filename + show/hide */}
                   <div className="flex items-center justify-between mb-1">
                     <span 
                       className="truncate max-w-[70%]" 
@@ -75,7 +73,6 @@ export function ContextWindow({ contextChunks }: { contextChunks: any[] }) {
                     </span>
                   </div>
                   
-                  {/* Bottom row: metadata source (full width) */}
                   <div className="w-full">
                     <span 
                       className="truncate block text-responsive-xs text-neutral-500 dark:text-neutral-400" 
@@ -88,9 +85,9 @@ export function ContextWindow({ contextChunks }: { contextChunks: any[] }) {
                 
                 <div className="px-4 pb-4 pt-2 text-responsive-sm text-neutral-800 dark:text-neutral-200">
                   {isExpanded ? (
-                    <div className="whitespace-pre-wrap leading-relaxed">{fullText}</div>
+                    <div>{fullText}</div>
                   ) : (
-                    <div className="whitespace-pre-wrap leading-relaxed text-neutral-600 dark:text-neutral-300">{preview}</div>
+                    <div className="text-neutral-600 dark:text-neutral-300">{preview}</div>
                   )}
                 </div>
               </div>
