@@ -31,6 +31,8 @@ export default function Chat() {
   const [streamController, setStreamController] = useState<AbortController | null>(null);
   const [contextData, setContextData] = useState<any>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Add state for controlling context window
+  const [contextIsOpen, setContextIsOpen] = useState(false);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -103,7 +105,6 @@ export default function Chat() {
 
   const controller = new AbortController();
   setStreamController(controller);
-
 
     try {
       const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
@@ -206,7 +207,9 @@ export default function Chat() {
       setStreamController(null);
     }
   }
+  
   const isEmpty = history.length === 0
+  
   useEffect(() => {
     if (chats.length === 0 && !activeChatId) {
       const newChatId = v4();
@@ -251,7 +254,7 @@ export default function Chat() {
       onGuest={() => setShowLoginForm(false)}
     />
   : (
-    <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden flex">
+    <div className="bg-neutral-100 dark:bg-neutral-900 font-sans h-screen overflow-hidden flex">
       <SettingsMenu        
         useDoubleRetrievers={useDoubleRetrievers}
         setUseDoubleRetrievers={setUseDoubleRetrievers}
@@ -273,7 +276,10 @@ export default function Chat() {
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <div className="flex-1 flex flex-col items-center p-4 relative" style={{ marginRight: '18vw' }}>
+      <div 
+        className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-1" 
+        style={{ marginRight: contextIsOpen ? '25vw' : '0rem', marginLeft: "4vw"}}
+      >
         <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
           {isEmpty && (
             <div className="text-center">
@@ -311,7 +317,12 @@ export default function Chat() {
         )}
       </div>
 
-      <ContextWindow contextChunks={contextData} />
+      {/* Context Window with controlled state */}
+      <ContextWindow 
+        contextChunks={contextData} 
+        isOpen={contextIsOpen}
+        setIsOpen={setContextIsOpen}
+      />
     </div>
   )
 }

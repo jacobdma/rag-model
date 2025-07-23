@@ -6,12 +6,23 @@ function getFileName(path: string) {
   return parts[parts.length - 1]
 }
 
-export function ContextWindow({ contextChunks }: { contextChunks: any[] }) {
-  const [isOpen, setIsOpen] = useState(false)
+interface ContextWindowProps {
+  contextChunks: any[]
+  isOpen?: boolean
+  setIsOpen?: (open: boolean) => void
+}
+
+export function ContextWindow({ 
+  contextChunks, 
+  isOpen: externalIsOpen, 
+  setIsOpen: externalSetIsOpen 
+}: ContextWindowProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Always treat contextChunks as an array
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen
+  const setIsOpen = externalSetIsOpen || setInternalIsOpen
   const safeChunks = Array.isArray(contextChunks) ? contextChunks : []
 
   // Automatically open/close popup based on contextChunks

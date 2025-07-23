@@ -45,9 +45,9 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
         <div className="text-left mb-4">
           <div className="inline-block px-4 py-2 rounded-lg text-neutral-800 dark:text-neutral-100">
             <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-neutral-500 dark:bg-neutral-400 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-neutral-500 dark:bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-              <div className="w-2 h-2 bg-neutral-500 dark:bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+              <div className="w-1 h-1 bg-neutral-500 dark:bg-neutral-400 rounded-full animate-bounce"></div>
+              <div className="w-1 h-1 bg-neutral-500 dark:bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+              <div className="w-1 h-1 bg-neutral-500 dark:bg-neutral-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
             </div>
           </div>
         </div>
