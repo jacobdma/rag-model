@@ -80,16 +80,8 @@ export default function Chat() {
     const stopwords = new Set(["the", "a", "an", "of", "to", "is", "and", "in", "on", "with", "that", "for", "as"]);
     const words = message.trim().split(/\s+/).filter(word => !stopwords.has(word.toLowerCase()));
     const firstFew = words.slice(0, 6).join(" ");
-    const title = firstFew[0].toUpperCase() + firstFew.slice(1);
-
-    const lower = message.trim().toLowerCase();
-    if (["how", "what", "why", "when", "where", "who"].some(q => lower.startsWith(q))) {
-        return `Question: ${title}`;
-    } else if (lower.startsWith("generate") || lower.startsWith("create")) {
-        return `Request: ${title}`;
-    } else {
-        return `Topic: ${title}`;
-    }
+    const title = firstFew[0] + firstFew.slice(1);
+    return `${title}`;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

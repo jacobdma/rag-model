@@ -68,36 +68,16 @@ export function Sidebar({
   // Sidebar content
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between">
-      {/* Top row: Profile & Settings */}
-      <div className="flex items-center justify-between gap-2 px-2 pt-4 pb-2">
-        <button
-          className="flex items-center gap-2 px-3 py-2 rounded-3xl hover:bg-neutral-200 hover:dark:bg-neutral-700 text-responsive-base text-neutral-800 dark:text-neutral-100 font-semibold"
-          onClick={username ? onSignOut : onSignIn}
-        >
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-neutral-200 dark:bg-neutral-700 mr-1">
-            <User size={18} className="text-neutral-500 dark:text-neutral-200" />
-          </span>
-          {username ? username : "Sign In"}
-        </button>
-        <button
-          className="flex items-center gap-2 px-3 py-2 rounded-3xl hover:bg-neutral-200 hover:dark:bg-neutral-700 text-responsive-sm text-neutral-800 dark:text-neutral-100 font-semibold"
-          onClick={onOpenSettings}
-        >
-          <Settings2 size={20} />
-        </button>
-      </div>
       {/* New Chat button with extra spacing */}
-      <div className="px-2 mt-6">
+      <div className="px-2 py-4">
         <button
           onClick={createNewChat}
           disabled={currentChatIsEmpty}
-          className="flex items-center gap-2 px-3 py-2 mb-2 rounded-3xl hover:bg-neutral-200 hover:dark:bg-neutral-700 text-responsive-base text-neutral-800 dark:text-neutral-100 font-semibold w-full"
+          className="flex items-center gap-2 px-3 py-2 rounded-3xl hover:bg-neutral-200 hover:dark:bg-neutral-700 text-responsive-base text-neutral-800 dark:text-neutral-100 font-semibold w-full"
         >
-          <SquarePen size={20} />
+          <SquarePen size={16} />
           <span>New Chat</span>
         </button>
-        {/* Divider below New Chat button */}
-        <div className="my-4 border-t border-neutral-200 dark:border-neutral-700" />
       </div>
       {/* Chat list with extra spacing */}
       <div className="flex-1 overflow-y-auto px-2 pb-4">
@@ -121,12 +101,30 @@ export function Sidebar({
                   className={`group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-red-500 mr-3 ${chat.id == activeChatId ? "opacity-100" : "opacity-0"}`}
                   title="Delete chat"
                 >
-                  <Trash2 size={20} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             </li>
           ))}
         </ul>
+      </div>
+      {/* Bottom row: Profile & Settings */}
+      <div className="flex items-center justify-between gap-2 px-2 pt-4 pb-2">
+        <button
+          className="flex items-center gap-2 rounded-3xl pr-3 hover:bg-neutral-200 hover:dark:bg-neutral-700 text-responsive-base text-neutral-800 dark:text-neutral-100 font-semibold"
+          onClick={username ? onSignOut : onSignIn}
+        >
+          <span className="inline-flex items-center justify-center p-2 rounded-full bg-neutral-200 dark:bg-neutral-700 mr-1">
+            <User size={18} className="text-neutral-500 dark:text-neutral-200" />
+          </span>
+          {username ? username : "Sign In"}
+        </button>
+        <button
+          className="flex items-center gap-2 p-2 rounded-3xl hover:bg-neutral-200 hover:dark:bg-neutral-700 text-responsive-sm text-neutral-800 dark:text-neutral-100 font-semibold"
+          onClick={onOpenSettings}
+        >
+          <Settings2 size={16} />
+        </button>
       </div>
     </div>
   )

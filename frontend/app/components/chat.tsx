@@ -17,10 +17,10 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
   }, [messages])
 
   return (
-    <div className={`flex-col overflow-y-auto mb-4 w-full max-w-3xl mx-auto ${messages.length === 0 ? "" : "flex-1"}`}>
+    <div className={`flex-col overflow-y-auto mb-4 w-full max-w-xl mx-auto ${messages.length === 0 ? "" : "flex-1"}`}>
       {messages.map((message, index) => (
         <div key={index} className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}>
-          <div className={`inline-block px-4 py-2 text-responsive-base rounded-3xl break-words whitespace-pre-wrap text-left${
+          <div className={`inline-block px-4 py-2 text-responsive-sm rounded-3xl break-words whitespace-pre-wrap text-left${
             message.role === "user" 
             ? `
               bg-neutral-100                  
@@ -68,7 +68,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
           }, [input])
           
   return (
-    <form onSubmit={onSubmit} className="w-full max-w-3xl mx-auto">
+    <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto">
       <div className="
       border border-neutral-300 
       dark:border-neutral-700 
@@ -76,6 +76,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
       rounded-3xl
       shadow-xl 
       mt-4
+      text-responsive-base
       ">
         <textarea
           ref={textareaRef}
@@ -124,24 +125,24 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
                   `
             }`}
           >
-            <Search size={20}/>
+            <Search size={16}/>
             <span className="text-responsive-sm font-semibold">Search</span>
           </button>
           {isStreaming ? (
             <button
               type="button"
               onClick={onStop}
-              className="p-2 rounded-full bg-red-500 w-10 h-10 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
+              className="p-2 rounded-full bg-red-500 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
             >
-              <Square size={20} fill="white"/>
+              <Square size={16} fill="white"/>
             </button>
           ) : (
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="p-2 rounded-full bg-green-500 w-10 h-10 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
+              className="p-2 rounded-full bg-green-500 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
             >
-              <ArrowUp size={20} />
+              <ArrowUp size={16} />
             </button>
           )}
         </div>
