@@ -22,7 +22,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
   return (
     <div className="relative">
       {label && (
-        <label className="block px-3 pb-2 text-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <label className="block px-3 pb-2 text-responsive-sm font-medium text-neutral-700 dark:text-neutral-300">
           {label}
         </label>
       )}
@@ -30,7 +30,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
         onClick={() => setOpen(!open)}
         className="
           w-full h-9 flex justify-between items-center
-          px-3 rounded-full text-sm font-medium
+          px-3 rounded-full text-responsive-sm font-medium
           text-neutral-700 dark:text-neutral-300
           bg-neutral-100 dark:bg-neutral-800
           hover:bg-neutral-200 dark:hover:bg-neutral-700

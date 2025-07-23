@@ -21,7 +21,7 @@ const Slider: React.FC<SliderProps> = ({
   displayValue,
 }) => (
   <div>
-    <div className="px-3 pb-3 text-sm font-medium flex justify-between">
+    <div className="px-3 pb-3 text-responsive-sm font-medium flex justify-between">
       <label className="block text-neutral-800 dark:text-neutral-200">
         {label}
       </label>

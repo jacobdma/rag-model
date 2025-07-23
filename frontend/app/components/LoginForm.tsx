@@ -44,11 +44,11 @@ export default function LoginForm({
         {/* Welcome Header */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center mb-4">
-            <h1 className="text-3xl font-black text-gray-800 dark:text-white">
+            <h1 className="text-responsive-3xl font-black text-gray-800 dark:text-white">
               IHI Assistant
             </h1>
           </div>
-          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+          <p className="text-gray-600 dark:text-gray-300 text-responsive-sm leading-relaxed">
             Login with your company credentials to get started
           </p>
         </div>
@@ -71,7 +71,7 @@ export default function LoginForm({
           Log In
         </button>
         {/* Continue as guest button */}
-        <p className="p-3 text-lg text-center">OR</p>
+        <p className="p-3 text-responsive-lg text-center">OR</p>
         <button
           className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 p-3 rounded-3xl shadow-xl mt-2"
           onClick={onGuest}

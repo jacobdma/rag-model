@@ -17,10 +17,10 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
   }, [messages])
 
   return (
-    <div className={`flex-col overflow-y-auto mb-4 w-3xl ? ${messages.length === 0 ? "" : "flex-1"}`}>
+    <div className={`flex-col overflow-y-auto mb-4 w-full max-w-3xl mx-auto ${messages.length === 0 ? "" : "flex-1"}`}>
       {messages.map((message, index) => (
         <div key={index} className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}>
-          <div className={`inline-block px-4 py-2 rounded-3xl break-words whitespace-pre-wrap text-left${
+          <div className={`inline-block px-4 py-2 text-responsive-base rounded-3xl break-words whitespace-pre-wrap text-left${
             message.role === "user" 
             ? `
               bg-neutral-100                  
@@ -68,7 +68,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
           }, [input])
           
   return (
-    <form onSubmit={onSubmit} className="w-full max-w-3xl">
+    <form onSubmit={onSubmit} className="w-full max-w-3xl mx-auto">
       <div className="
       border border-neutral-300 
       dark:border-neutral-700 
@@ -125,7 +125,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
             }`}
           >
             <Search size={20}/>
-            <span className="text-sm font-semibold">Search</span>
+            <span className="text-responsive-sm font-semibold">Search</span>
           </button>
           {isStreaming ? (
             <button

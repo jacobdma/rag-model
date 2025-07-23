@@ -9,7 +9,7 @@ interface ToggleProps {
 const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label }) => (
   <div className="flex justify-between items-center">
     {label && (
-      <label className="px-3 text-sm font-medium text-neutral-800 dark:text-neutral-200">
+      <label className="px-3 text-responsive-sm font-medium text-neutral-800 dark:text-neutral-200">
         {label}
       </label>
     )}

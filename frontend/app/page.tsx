@@ -259,7 +259,7 @@ export default function Chat() {
       onGuest={() => setShowLoginForm(false)}
     />
   : (
-    <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden">
+    <div className="bg-white dark:bg-neutral-900 font-sans h-screen overflow-hidden flex justify-center items-center">
       <SettingsMenu
         useDoubleRetrievers={useDoubleRetrievers}
         setUseDoubleRetrievers={setUseDoubleRetrievers}
@@ -281,15 +281,15 @@ export default function Chat() {
           onSignOut={handleSignOut}
           onOpenSettings={() => setSettingsOpen(true)}
         />
-        <div className={`w-full p-4 h-screen flex flex-col items-center ${isEmpty ? "justify-center" : ""}`}>
+        <div className={`w-[60vw] max-w-[60vw] min-w-[400px] p-4 h-screen flex flex-col items-center ${isEmpty ? "justify-center" : ""}`}>
             {isEmpty && (
               <div className="text-center ">
-                <p className="font-medium text-neutral-700 dark:text-neutral-300 text-3xl">
+                <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-3xl">
                   What can I help you find today?
                 </p>
               </div>
             )}
-            <ContextWindow contextChunks={contextData} />            
+            <ContextWindow contextChunks={contextData} />
             <MessageList messages={history} isLoading={isLoading} />
             <ChatInput
               input={input}
@@ -307,7 +307,7 @@ export default function Chat() {
             />
         </div>
         {isEmpty && (
-          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto mt-4 text-xs">
+          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto mt-4 text-responsive-xs">
             <strong className="text-neutral-700 dark:text-neutral-300">Disclaimer:</strong> This system uses AI-generated content. The information provided may be incomplete, outdated, or incorrect.{" "}
             <strong className="text-neutral-700 dark:text-neutral-300">
               Do not rely on this tool as a sole source for decision-making. Always verify with official documentation and authoritative sources.
