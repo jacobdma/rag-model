@@ -39,7 +39,7 @@ export default function LoginForm({
   };
 
   return (
-    <div className="bg-neutral-100 dark:bg-neutral-900 font-medium w-full h-screen justify-center items-center flex">
+    <div className="bg-neutral-200 dark:bg-neutral-900 font-medium w-full h-screen justify-center items-center flex">
       <div className="bg-white dark:bg-neutral-800 p-10 rounded-3xl shadow-xl w-sm mx-auto flex flex-col justify-center">
         {/* Welcome Header */}
         <div className="text-center mb-8 animate-fade-in">

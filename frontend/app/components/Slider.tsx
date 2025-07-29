@@ -29,7 +29,7 @@ const Slider: React.FC<SliderProps> = ({
         {displayValue ?? value}
       </p>
     </div>
-    <div className="relative w-full h-7 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 hover:dark:bg-neutral-700">
+    <div className="relative w-full h-7 rounded-full bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-200 hover:dark:bg-neutral-700">
       <div
         className="absolute h-7 rounded-full bg-green-500"
         style={{ width: `${((value - min) / (max - min)) * 100}%` }}

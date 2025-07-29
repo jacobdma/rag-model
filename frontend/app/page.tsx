@@ -140,7 +140,6 @@ export default function Chat() {
         if (done) break
         let chunk = decoder.decode(value)
         if (chunk.includes("[CONTEXT START]")) {
-          let contextData = null
           const start = chunk.indexOf("[CONTEXT START]");
           const end = chunk.indexOf("[CONTEXT END]");
           const jsonStr = chunk.substring(start + 15, end);
@@ -254,7 +253,7 @@ export default function Chat() {
       onGuest={() => setShowLoginForm(false)}
     />
   : (
-    <div className="bg-neutral-100 dark:bg-neutral-900 font-sans h-screen overflow-hidden flex">
+    <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
       <SettingsMenu        
         useDoubleRetrievers={useDoubleRetrievers}
         setUseDoubleRetrievers={setUseDoubleRetrievers}
@@ -278,7 +277,7 @@ export default function Chat() {
 
       <div 
         className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-1" 
-        style={{ marginRight: contextIsOpen ? '25vw' : '0rem', marginLeft: "4vw"}}
+        style={{ marginRight: '25vw', marginLeft: "4vw"}}
       >
         <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
           {isEmpty && (
@@ -317,11 +316,12 @@ export default function Chat() {
         )}
       </div>
 
-      {/* Context Window with controlled state */}
       <ContextWindow 
         contextChunks={contextData} 
         isOpen={contextIsOpen}
         setIsOpen={setContextIsOpen}
+        chatId={activeChatId}
+        token={token}
       />
     </div>
   )

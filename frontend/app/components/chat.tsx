@@ -20,10 +20,10 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
     <div className={`flex-col overflow-y-auto mb-4 w-full max-w-xl mx-auto ${messages.length === 0 ? "" : "flex-1"}`}>
       {messages.map((message, index) => (
         <div key={index} className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}>
-          <div className={`inline-block px-4 py-2 text-responsive-sm rounded-3xl break-words whitespace-pre-wrap text-left${
+          <div className={`inline-block px-4 py-2 text-responsive-base rounded-3xl break-words whitespace-pre-wrap text-left${
             message.role === "user" 
             ? `
-              bg-neutral-100                  
+              bg-neutral-200                  
               dark:bg-neutral-800
               text-neutral-700 
               dark:text-neutral-300
@@ -74,9 +74,8 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
       dark:border-neutral-700 
       p-2
       rounded-3xl
-      shadow-xl 
       mt-4
-      text-responsive-base
+      text-responsive-lg
       ">
         <textarea
           ref={textareaRef}
@@ -101,7 +100,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
           }
           }}
         />
-        <div className="flex items-center gap-2 justify-between w-full">
+        <div className="flex items-center justify-between w-full">
           <button
             type="button"
             onClick={() => setUseWebSearch(!useWebSearch)}
@@ -116,7 +115,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
                   dark:hover:bg-blue-900
                   `
                 : `
-                  bg-neutral-100                  
+                  bg-neutral-200                  
                   dark:bg-neutral-800
                   text-neutral-700 
                   dark:text-neutral-300
@@ -126,7 +125,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
             }`}
           >
             <Search size={16}/>
-            <span className="text-responsive-sm font-semibold">Search</span>
+            <span className="text-responsive-base font-semibold">Search</span>
           </button>
           {isStreaming ? (
             <button

@@ -32,7 +32,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
           w-full h-9 flex justify-between items-center
           px-3 rounded-full text-responsive-sm font-medium
           text-neutral-700 dark:text-neutral-300
-          bg-neutral-100 dark:bg-neutral-800
+          bg-neutral-200 dark:bg-neutral-800
           hover:bg-neutral-200 dark:hover:bg-neutral-700
           focus:outline-none
         "
@@ -55,7 +55,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
               }}
               className={`
                 px-4 py-2 cursor-pointer rounded-2xl 
-                hover:bg-neutral-100 dark:hover:bg-neutral-800
+                hover:bg-neutral-200 dark:hover:bg-neutral-800
                 font-medium
               `}
             >

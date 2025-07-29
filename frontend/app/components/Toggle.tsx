@@ -17,7 +17,7 @@ const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label }) => (
       type="button"
       onClick={() => onChange(!checked)}
       className={`w-12 h-7 flex items-center rounded-full
-        ${checked ? "bg-green-500 hover:bg-green-600" : "hover:bg-neutral-200 hover:dark:bg-neutral-700 bg-neutral-100 dark:bg-neutral-800"}`}
+        ${checked ? "bg-green-500 hover:bg-green-600" : "hover:bg-neutral-200 hover:dark:bg-neutral-700 bg-neutral-200 dark:bg-neutral-800"}`}
       aria-pressed={checked}
     >
       <div

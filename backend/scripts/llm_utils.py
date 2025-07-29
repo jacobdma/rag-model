@@ -40,7 +40,7 @@ class LLMEngine:
             print(f">>> Model loaded in {(time.time() - start):.2f}s")
         return self._model, self._tokenizer
     
-    def prompt(self, prompt: str, max_new_tokens: int = 384, temperature: float = 0.2, stream: bool = False) -> TextIteratorStreamer | str:
+    def prompt(self, prompt: str, max_new_tokens: int = 512, temperature: float = 0.2, stream: bool = False) -> TextIteratorStreamer | str:
         """
         Prompts cached model and returns output with optional streaming bool
         """

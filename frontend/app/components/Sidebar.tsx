@@ -110,9 +110,7 @@ export function Sidebar({
 
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between items-center">
-      {/* Top section */}
       <div className="flex flex-col items-center gap-4 py-4">
-        {/* New Chat button */}
         <button
           onClick={createNewChat}
           disabled={currentChatIsEmpty}
@@ -122,7 +120,6 @@ export function Sidebar({
           <SquarePen size={20} />
         </button>
         
-        {/* Chat list button */}
         <button
           onClick={() => setChatModalOpen(true)}
           className="p-3 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
@@ -132,7 +129,6 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Bottom section - Profile */}
       <div className="relative pb-4">
         <button
           className="p-3 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
@@ -142,7 +138,6 @@ export function Sidebar({
           <User size={20} />
         </button>
 
-        {/* Profile Dropdown */}
         {profileDropdownOpen && (
           <div 
             ref={profileDropdownRef}
@@ -158,7 +153,7 @@ export function Sidebar({
                     onOpenSettings()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 >
                   <Settings2 size={16} />
                   Settings
@@ -168,7 +163,7 @@ export function Sidebar({
                     onSignOut()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 >
                   <LogOut size={16} />
                   Sign Out
@@ -181,7 +176,7 @@ export function Sidebar({
                     onSignIn()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 >
                   <User size={16} />
                   Sign In
@@ -191,7 +186,7 @@ export function Sidebar({
                     onOpenSettings()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 >
                   <Settings2 size={16} />
                   Settings
@@ -206,12 +201,10 @@ export function Sidebar({
 
   return (
     <>
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-[4vw] bg-neutral-100 dark:bg-neutral-800 z-40 flex flex-col">
+      <div className="fixed inset-y-0 left-0 w-[4vw] bg-neutral-200 dark:bg-neutral-800 z-40 flex flex-col">
         {sidebarContent}
       </div>
 
-      {/* Chat Modal */}
       {chatModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 backdrop-blur-[6px]" />
@@ -227,7 +220,7 @@ export function Sidebar({
                   placeholder="Search chats..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 text-sm bg-neutral-100 dark:bg-neutral-800 rounded-3xl text-neutral-800 dark:text-neutral-100"
+                  className="w-full pl-10 pr-3 py-2 text-sm bg-neutral-200 dark:bg-neutral-800 rounded-3xl text-neutral-800 dark:text-neutral-100"
                 />
               </div>
               <button
@@ -236,7 +229,7 @@ export function Sidebar({
                   setChatModalOpen(false)
                 }}
                 disabled={currentChatIsEmpty}
-                className="flex items-center gap-2 p-3 rounded-3xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-sm text-neutral-600 dark:text-neutral-400"
+                className="flex items-center gap-2 p-3 rounded-3xl hover:bg-neutral-200 dark:hover:bg-neutral-800 text-sm text-neutral-600 dark:text-neutral-400"
                 title="New Chat"
               >
                 <SquarePen size={16} />
@@ -255,7 +248,7 @@ export function Sidebar({
                       <div className={`group flex items-center rounded-3xl text-sm ${
                         chat.id === activeChatId
                           ? `bg-neutral-200 dark:bg-neutral-700 font-semibold text-neutral-800 dark:text-neutral-100`
-                          : `hover:bg-neutral-100 dark:hover:bg-neutral-800 font-medium text-neutral-600 dark:text-neutral-400`
+                          : `hover:bg-neutral-200 dark:hover:bg-neutral-800 font-medium text-neutral-600 dark:text-neutral-400`
                       }`}>
                         <button
                           onClick={() => selectChat(chat.id)}

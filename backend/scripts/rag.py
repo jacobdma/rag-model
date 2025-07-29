@@ -1,4 +1,5 @@
 # Standard library imports
+from collections import defaultdict
 import os
 import time
 import yaml
@@ -78,11 +79,33 @@ class RAGPipeline:
                 break
 
         return selected
+    
+    def _process_chat_documents(self, chat_id: str) -> list[Document]:
+        """Process uploaded documents for a specific chat"""
+        from .main import CHAT_DOCUMENTS
+        
+        if chat_id not in CHAT_DOCUMENTS:
+            return []
+        
+        chat_docs = []
+        for uploaded_doc in CHAT_DOCUMENTS[chat_id]:
+            # Use your existing chunking logic
+            chunks = self.chunker.clean_paragraphs(
+                docs=[uploaded_doc.content],
+                chunk_size=1024,
+                chunk_overlap=100,
+                granularity="uploaded",
+                min_length=50,
+                source=f"{uploaded_doc.filename}"
+            )
+            chat_docs.extend(chunks)
+        
+        return chat_docs
 
     def _log_time(self, start: float, message: str) -> None:
         print(f"{message} {time.time() - start:.2f} seconds")
 
-    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True):
+    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True, chat_id: str = None):
         """Stream the RAG pipeline for interactive question answering."""
         start_total = time.time()
         # 1. Load retrievers
@@ -158,24 +181,40 @@ class RAGPipeline:
             # 6. Invokes retrievers to get relevant chunks
             docs = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5) 
 
+             # 7. Get uploaded chat documents if chat_id provided
+            chat_documents = []
+            if chat_id:
+                chat_documents = self._process_chat_documents(chat_id)
+                print(f"[DEBUG] Found {len(chat_documents)} uploaded documents for chat {chat_id}")
+
+            # 8. Combine regular docs with chat documents
+            all_docs = docs + chat_documents
+
             # 7. Get surrounding documents
             retrieved_info = []
             context_groups = []  # Each group: dict with keys: 'source', 'granularity', 'chunks', 'content_set', 'total_len', 'original_order', 'metadata_list'
             group_counter = 0
-            for doc in docs:
-                context_chunks = self.get_surrounding_chunks(doc, chunk_dict[doc.metadata["granularity"]])
+
+            for doc in all_docs:
+                if doc.metadata.get("granularity") == "uploaded":
+                    context_chunks = [doc]
+                else:
+                    context_chunks = self.get_surrounding_chunks(doc, chunk_dict[doc.metadata["granularity"]])
+
                 # Group by contiguous chunks from the same source and granularity
                 if not context_chunks:
                     continue
+
                 source = os.path.normpath(context_chunks[0].metadata.get("source", ""))
                 granularity = context_chunks[0].metadata.get("granularity", "")
                 chunk_numbers = [c.metadata.get("chunk_number", 0) for c in context_chunks]
-                # Use tuple of (source, min_chunk, max_chunk, granularity) as group id
                 group_id = (source, min(chunk_numbers), max(chunk_numbers), granularity)
                 group_content = "".join([c.page_content for c in context_chunks])
+
                 content_set = set()
                 for c in context_chunks:
                     content_set.update(c.page_content.splitlines())
+
                 context_groups.append({
                     "group_id": group_id,
                     "source": source,
@@ -189,17 +228,13 @@ class RAGPipeline:
                 })
                 group_counter += 1
 
-            # Improved deduplication: remove groups whose content is a strict subset of the union of other groups' content
-            from collections import defaultdict
             source_to_groups = defaultdict(list)
             for group in context_groups:
                 source_to_groups[group["source"]].append(group)
 
             deduped_groups = []
             for source, groups in source_to_groups.items():
-                # Step 1: Remove groups whose content is a strict subset of the union of other groups
                 keep = [True] * len(groups)
-                group_contents = [set(c.page_content for c in g["chunks"]) for g in groups]
                 for i, g1 in enumerate(groups):
                     g1_content = set(c.page_content for c in g1["chunks"])
                     union_others = set()
@@ -207,7 +242,6 @@ class RAGPipeline:
                         if i == j:
                             continue
                         union_others.update(c.page_content for c in g2["chunks"])
-                    # If all of g1's content is in the union of others, and others have more content, remove g1
                     if g1_content and g1_content.issubset(union_others) and len(union_others) > len(g1_content):
                         keep[i] = False
                 filtered_groups = [g for k, g in zip(keep, groups) if k]
@@ -224,11 +258,9 @@ class RAGPipeline:
                     else:
                         last = merged[-1]
                         last_chunk_numbers = set(c.metadata["chunk_number"] for c in last["chunks"])
-                        # Check for overlap or contiguity
                         if last_chunk_numbers & group_chunk_numbers or (
                             max(last_chunk_numbers) + 1 >= min(group_chunk_numbers) and min(group_chunk_numbers) <= max(last_chunk_numbers) + 1
                         ):
-                            # Merge: combine, deduplicate, and sort by chunk_number
                             all_chunks = last["chunks"] + group["chunks"]
                             seen = set()
                             unique_chunks = []

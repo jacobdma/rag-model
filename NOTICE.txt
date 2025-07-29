@@ -78,6 +78,7 @@ PyMuPDF - GNU AFFERO GPL 3.0 or Artifex Commercial License - https://github.com/
 python-dateutil - Dual License - https://github.com/dateutil/dateutil  
 python-dotenv - BSD 3-Clause - https://github.com/theskumar/python-dotenv  
 python-jose - MIT - http://github.com/mpdavis/python-jose
+python-multipart - Apache-2.0 - https://github.com/Kludex/python-multipart
 python-pptx - MIT - https://github.com/scanny/python-pptx  
 pytz - MIT - http://pythonhosted.org/pytz  
 PyYAML - MIT - https://pyyaml.org/  

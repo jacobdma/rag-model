@@ -1,11 +1,14 @@
 # Standard library imports
 import json
+import os
+import pathlib
+import tempfile
 import time
 import uuid
 import yaml
 
 # Library-specific imports
-from fastapi import FastAPI, Header, HTTPException, Path, Request
+from fastapi import FastAPI, Header, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -19,6 +22,7 @@ from pymongo import MongoClient
 from .rag import RAGPipeline, Message
 from .config import ModelConfig
 from .llm_utils import get_llm_engine
+from .file_readers import FileReader
 
 # Open and read config
 with open("config.yaml", "r") as f:
@@ -65,7 +69,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Data models
 class LoginData(BaseModel):
     username: str
@@ -83,6 +86,12 @@ class Configuration(BaseModel):
     model: str
     tone: str
 
+class UploadedDocument(BaseModel):
+    filename: str
+    content: str
+    file_type: str
+
+CHAT_DOCUMENTS = {}
 
 # Exception handler for validation errors
 @app.exception_handler(RequestValidationError)
@@ -142,7 +151,8 @@ async def stream_query(input: QueryInput, request: Request, authorization: str =
             input.query,
             input.history,
             input.use_web_search,
-            input.use_double_retrievers
+            input.use_double_retrievers,
+            chat_id=chat_id
         )
         first_yield = next(generator)
         if isinstance(first_yield, list):
@@ -201,7 +211,7 @@ async def get_chats(authorization: str = Header(...)):
     return JSONResponse(content=chats)
 
 @app.delete("/chats/{chat_id}")
-async def delete_chat(chat_id: str = Path(...), authorization: str = Header(...)):
+async def delete_chat(chat_id: str, authorization: str = Header(...)):
     username = get_username_from_token(authorization)
     
     result = chats_collection.delete_one({
@@ -214,3 +224,113 @@ async def delete_chat(chat_id: str = Path(...), authorization: str = Header(...)
         raise HTTPException(status_code=404, detail="Chat not found")
 
     return {"message": "Chat deleted"}
+
+@app.post("/upload-files/{chat_id}")
+async def upload_files(
+    chat_id: str,
+    files: list[UploadFile] = File(),
+):
+    if chat_id not in CHAT_DOCUMENTS:
+        CHAT_DOCUMENTS[chat_id] = []
+    
+    supported_extensions = {".docx", ".pptx", ".txt", ".pdf", ".csv"}
+    processed_files = []
+    
+    for file in files:
+        try:
+            # Check file extension
+            file_ext = os.path.splitext(file.filename)[1].lower()
+            if file_ext not in supported_extensions:
+                processed_files.append({
+                    "filename": file.filename,
+                    "status": "error",    
+                    "message": f"Unsupported file type: {file_ext}"
+                })
+                continue
+            
+            file_content = await file.read()
+            reader = FileReader(supported_extensions, set())
+            
+            with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as temp_file:
+                temp_file.write(file_content)
+                temp_file.flush()
+                temp_path = pathlib.Path(temp_file.name)
+            
+            try:
+                result = reader.read_docs(temp_path)
+                if result is None:
+                    processed_files.append({
+                        "filename": file.filename,
+                        "status": "error", 
+                        "message": "Failed to process file"
+                    })
+                    continue
+
+                text_content, _ = result
+                if not text_content or len(text_content.strip()) < 10:
+                    processed_files.append({
+                        "filename": file.filename,
+                        "status": "error",
+                        "message": "File appears to be empty or unreadable"
+                    })
+                    continue
+                
+                doc = UploadedDocument(
+                    filename=file.filename,
+                    content=text_content,
+                    file_type=file_ext
+                )
+                
+                CHAT_DOCUMENTS[chat_id].append(doc)
+                
+                processed_files.append({
+                    "filename": file.filename,
+                    "status": "success",
+                    "message": "File processed successfully"
+                })
+                
+            finally:
+                os.unlink(temp_path)
+                
+        except Exception as e:
+            processed_files.append({
+                "filename": file.filename,
+                "status": "error",
+                "message": f"A processing error occurred: {str(e)}"
+            })
+    
+    return {
+        "chat_id": chat_id,
+        "processed_files": processed_files,
+        "total_documents": len(CHAT_DOCUMENTS[chat_id])
+    }
+
+@app.get("/chat-documents/{chat_id}")
+async def get_chat_documents(chat_id: str):
+    """Get uploaded documents for a specific chat"""
+    documents = CHAT_DOCUMENTS.get(chat_id, [])
+    return {
+        "chat_id": chat_id,
+        "documents": [
+            {
+                "filename": doc.filename,
+                "file_type": doc.file_type,
+                "size": len(doc.content)
+            }
+            for doc in documents
+        ]
+    }
+
+@app.delete("/chat-documents/{chat_id}/{filename}")
+async def delete_chat_document(chat_id: str, filename: str):
+    """Delete a specific document from a chat"""
+    if chat_id not in CHAT_DOCUMENTS:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    documents = CHAT_DOCUMENTS[chat_id]
+    for i, doc in enumerate(documents):
+        if doc.filename == filename:
+            del documents[i]
+            return {"message": f"Document {filename} deleted"}
+    
+    raise HTTPException(status_code=404, detail="Document not found")
