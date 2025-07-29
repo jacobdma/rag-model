@@ -114,7 +114,7 @@ export function Sidebar({
         <button
           onClick={createNewChat}
           disabled={currentChatIsEmpty}
-          className="p-3 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 disabled:opacity-50"
+          className="p-2 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 disabled:opacity-50"
           title="New Chat"
         >
           <SquarePen size={20} />
@@ -122,7 +122,7 @@ export function Sidebar({
         
         <button
           onClick={() => setChatModalOpen(true)}
-          className="p-3 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+          className="p-2 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
           title="Chat History"
         >
           <MessageCircle size={20} />
@@ -131,7 +131,7 @@ export function Sidebar({
 
       <div className="relative pb-4">
         <button
-          className="p-3 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+          className="p-2 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
           onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
           title={username || "Sign In"}
         >

@@ -276,7 +276,7 @@ export default function Chat() {
       />
 
       <div 
-        className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-1" 
+        className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-2" 
         style={{ marginRight: '25vw', marginLeft: "4vw"}}
       >
         <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>

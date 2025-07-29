@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from .llm_utils import get_llm_engine
 from .hybrid_retriever import HybridRetriever
 from .retriever_builder import RetrieverBuilder
+from .chunk_documents import DocumentChunker
 from . import config
 from .config import ModelConfig
 
@@ -89,8 +90,7 @@ class RAGPipeline:
         
         chat_docs = []
         for uploaded_doc in CHAT_DOCUMENTS[chat_id]:
-            # Use your existing chunking logic
-            chunks = self.chunker.clean_paragraphs(
+            chunks = DocumentChunker().clean_paragraphs(
                 docs=[uploaded_doc.content],
                 chunk_size=1024,
                 chunk_overlap=100,
@@ -121,7 +121,7 @@ class RAGPipeline:
         else:
             hybrid_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever["medium"], 
-                        vector_store["medium"].as_retriever()],
+                    vector_store["medium"].as_retriever()],
                 weights=[0.5, 0.5]
             )
 
