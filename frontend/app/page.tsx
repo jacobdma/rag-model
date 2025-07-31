@@ -31,33 +31,34 @@ export default function Chat() {
   const [streamController, setStreamController] = useState<AbortController | null>(null);
   const [contextData, setContextData] = useState<any>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Add state for controlling context window
   const [contextIsOpen, setContextIsOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
-    const storedUsername = localStorage.getItem("username")   
-    if (storedToken) setToken(storedToken)
-    if (storedUsername) setUsername(storedUsername)
-  }, [])
-
-  useEffect(() => {
-    if (token) {
-      console.log(token)
+    const storedUsername = localStorage.getItem("username")
+    
+    if (storedToken && storedUsername) {
+      // Validate token by trying to fetch chats
       fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${storedToken}` },
       })
       .then(res => {
         if (res.status === 401) {
+          // Token is invalid, clear storage and show login
           localStorage.removeItem("access_token")
           localStorage.removeItem("username")
           setToken(null)
           setUsername(null)
+          setShowLoginForm(true)
           throw new Error("Unauthorized")
         }
         return res.json()
       })
       .then(data => {
+        // Token is valid, set user data and load chats
+        setToken(storedToken)
+        setUsername(storedUsername)
         const loadedChats = data.map((chat: any) => ({
           id: chat._id,
           name: chat.history?.[0]?.content?.slice(0, 30) || "New Chat",
@@ -69,10 +70,18 @@ export default function Chat() {
         }
       })
       .catch(err => {
-        console.error("Failed to load chats", err)
+        console.error("Failed to validate token or load chats", err)
       })
+      .finally(() => {
+        setIsInitializing(false)
+      })
+    } else {
+      // No stored credentials, show login form
+      setShowLoginForm(true)
+      setIsInitializing(false)
     }
-  }, [token])
+  }, [])
+
 
   const activeChat = chats.find((c) => c.id === activeChatId)
   const history = activeChat?.history ?? []
@@ -109,7 +118,7 @@ export default function Chat() {
     try {
       const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`},
+        headers: { "Content-Type": "application/json", ...(token && { "Authorization": `Bearer ${token}` })},
         body: JSON.stringify({ 
           query: userMessage.content, 
           history: history, 
@@ -119,6 +128,16 @@ export default function Chat() {
         }),
         signal: controller.signal,
       })
+      if (response.status === 401) {
+        // Token expired during request
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("username")
+        setToken(null)
+        setUsername(null)
+        setShowLoginForm(true)
+        throw new Error("Unauthorized")
+      }
+
       if (!response.ok || !response.body) throw new Error("Failed to get response")
 
       let assistantMessage = ""
@@ -236,21 +255,56 @@ export default function Chat() {
   function handleSignIn() {
     setShowLoginForm(true);
   }
+
   function handleSignOut() {
     setToken(null);
     setUsername(null);
+    setChats([]);
+    setActiveChatId(null);
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("username");
+  }
+
+   function handleLogin(tok: string, user: string) {
+    setToken(tok);
+    setUsername(user);
+    setShowLoginForm(false);
+    
+    // Load chats for the newly logged in user
+    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
+      headers: { Authorization: `Bearer ${tok}` },
+    })
+    .then(res => res.json())
+    .then(data => {
+      const loadedChats = data.map((chat: any) => ({
+        id: chat._id,
+        name: chat.history?.[0]?.content?.slice(0, 30) || "New Chat",
+        history: chat.history,
+      }))
+      setChats(loadedChats)
+      if (loadedChats.length > 0) {
+        setActiveChatId(loadedChats[0].id)
+      }
+    })
+    .catch(err => {
+      console.error("Failed to load chats after login", err)
+    })
+  }
+
+  function handleGuest() {
+    setShowLoginForm(false);
+    setToken(null);
+    setUsername(null);
+    setChats([]); // Clear any existing chats
+    setActiveChatId(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
   }
 
   return showLoginForm
   ? <LoginForm
-      onLogin={(tok, user) => {
-        setToken(tok);
-        setUsername(user);
-        setShowLoginForm(false);
-      }}
-      onGuest={() => setShowLoginForm(false)}
+      onLogin={handleLogin}
+      onGuest={handleGuest}
     />
   : (
     <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
