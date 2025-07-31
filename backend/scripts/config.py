@@ -143,45 +143,6 @@ Now decompose the following:
 USER QUERY: {query}
 Sub-questions:"""}
 
-CLASSIFICATION_TEMPLATE = """
-You are a query classifier.
-
-Your task is to detect whether a user message is casual conversation (e.g. greetings, gratitude, small talk, filler) or a technical question.
-
-Conversational messages include things like:
-- "hi", "hello", "hey", "yo", "how r u", "what's up", "thanks", "thank you", "ok", "cool", "lol"
-
-If the message is conversational, respond with exactly the word **"conversational"**.
-If the message is a technical or factual question (e.g. "what causes vibration", "how does this work"), respond with exactly the word **"inquiry"**.
-
-Do not guess. If the meaning is unclear but resembles a question, classify it as an inquiry.
-Expand informal language or abbreviations only if needed to understand the message's intent.
-
-Examples:
-
-User: hi  / hello / heyyy
-Assistant: conversational
-
-User: thanks  / thx
-Assistant: conversational
-
-User: how r u  / how are you?
-Assistant: conversational
-
-User: what causes vibration in motors?  
-Assistant: inquiry
-
-User: u kno what i mean?
-Assistant: conversational
-
-User: lol  
-Assistant: conversational
-
-Now classify this single message only. Respond with either "conversational" or "inquiry".
-
-User: {message}  
-Assistant:"""
-
 ENHANCED_CLASSIFICATION_TEMPLATE = """
 You are a query classifier for a technical assistant system.
 
@@ -194,10 +155,10 @@ Classify user messages into exactly one of these categories:
 **mixed**: Queries that clearly need both calculation AND code, or multiple technical approaches
 
 NOTE: Classify based on the primary intent of the query. 
-Calculations can start with "What is", "How do I", "Calculate", or similar. Calculations can include arithmetic (addition/subtraction, multiplication/division), algebra (variables like x and y, functions and equations, etc.), geometry (area, volume, surface area, etc.), or calculus (integrals/antiderivatives, derivatives, limits, etc.).
-Code queries often start with "Write", "Generate", "Debug", but can also start with "What is" or "How do I" if they involve coding concepts. Code can include multiple languages (Python, JavaScript, etc.) and frameworks.
+Calculations can be asked in a variety of ways, including direct questions or prompts. Calculations can include arithmetic (addition/subtraction, multiplication/division), algebra (variables like x and y, functions and equations, etc.), geometry (area, volume, surface area, etc.), or calculus (integrals/antiderivatives, derivatives, limits, etc.).
+Code queries often start with "Write", "Generate", "Debug", but can also start start with phrases that sound like questions. Code can include multiple languages (Python, JavaScript, etc.) and frameworks.
 
-Do not strictly follow the exact wording of the categories. Use your judgment to classify based on intent.
+Do not strictly follow the exact wording of the categories. If a query contains any mix of keywords related to calculations, it should be marked as such. If it contains any keywords related to code, it should be marked as such. General inquiries should be any form of question or request that does not require calculations or code. Conversational queries should be any form of query that is not a question, calculation, or code request.
 
 Respond with exactly one word: conversational, general_inquiry, math, coding, or mixed
 
