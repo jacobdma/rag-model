@@ -15,7 +15,6 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from ldap3 import Server, Connection, ALL
 from ldap3.core.exceptions import LDAPBindError
 from jose import jwt, JWTError
-from pydantic import BaseModel
 from pymongo import MongoClient
 
 # Local imports
@@ -23,6 +22,7 @@ from .rag import RAGPipeline, Message
 from .config import ModelConfig
 from .llm_utils import get_llm_engine
 from .file_readers import FileReader
+from .utils import LoginData, QueryInput, Configuration, UploadedDocument
 
 # Open and read config
 with open("config.yaml", "r") as f:
@@ -68,28 +68,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Data models
-class LoginData(BaseModel):
-    username: str
-    password: str
-
-class QueryInput(BaseModel):
-    query: str
-    history: list[Message] = []
-    use_web_search: bool
-    use_double_retrievers: bool = True
-    chat_id: str | None = None
-
-class Configuration(BaseModel):
-    temperature: float
-    model: str
-    tone: str
-
-class UploadedDocument(BaseModel):
-    filename: str
-    content: str
-    file_type: str
 
 CHAT_DOCUMENTS = {}
 

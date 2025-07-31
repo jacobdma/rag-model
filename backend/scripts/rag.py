@@ -19,10 +19,8 @@ from .retriever_builder import RetrieverBuilder
 from .chunk_documents import DocumentChunker
 from . import config
 from .config import ModelConfig
-
-class Message(BaseModel):
-    role: str
-    content: str
+from .handler import TechnicalHandler
+from .utils import Message
 
 class RAGPipeline:
     def __init__(self):
@@ -102,63 +100,67 @@ class RAGPipeline:
         
         return chat_docs
 
-    def _log_time(self, start: float, message: str) -> None:
-        print(f"{message} {time.time() - start:.2f} seconds")
-
     def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True, chat_id: str = None):
         """Stream the RAG pipeline for interactive question answering."""
-        start_total = time.time()
         # 1. Load retrievers
         bm25_retriever, vector_store, chunk_dict = self._get_retrievers()
-        if use_double_retrievers:
-            hybrid_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever["small"], 
-                        bm25_retriever["large"], 
-                        vector_store["small"].as_retriever(), 
-                        vector_store["large"].as_retriever()],
-                weights=[0.25, 0.25, 0.25, 0.25]
-            )
-        else:
-            hybrid_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever["medium"], 
-                    vector_store["medium"].as_retriever()],
-                weights=[0.5, 0.5]
-            )
 
-        # Try to run pipeline
         try:
-            # 2. Classify prompt as conversational or inquiry
-            classification_prompt = config.CLASSIFICATION_TEMPLATE.format(message=query)
+            # Enhanced classification
+            classification_prompt = config.ENHANCED_CLASSIFICATION_TEMPLATE.format(message=query)
             classification = self.engine.prompt(
                 prompt=classification_prompt,
                 temperature=0.1
-            )
+            ).strip().lower()
+            
+            print(f"[DEBUG] Query classified as: {classification}")
+            
+            # Route based on classification
+            if classification == "conversational":
 
-            if "conversational" in classification:
                 while True:
                     prompt = config.CHAT_RESPONSE_TEMPLATE.format(message=query).strip() + "\n\nAssistant:"
                     streamer = self.engine.prompt(prompt=prompt, stream=True)
-
+                    
                     tokens = []
                     for token in streamer:
                         tokens.append(token)
                         yield token
-
+                    
                     full_response = "".join(tokens)
-
-                    # Check for hallucinated dialogue format
                     if "User:" in full_response or "Assistant:" in full_response:
                         continue
                     break
                 return None
+            
+            elif classification in ["math", "coding", "mixed"]:
+                # Route to technical handler
+                for token in TechnicalHandler(self.engine, self._hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
+                    yield token
+                return None
+            
+            else:  # general_inquiry or fallback
+                # Continue with existing RAG pipeline
+                if use_double_retrievers:
+                    hybrid_retriever = EnsembleRetriever(
+                        retrievers=[bm25_retriever["small"], 
+                                bm25_retriever["large"], 
+                                vector_store["small"].as_retriever(), 
+                                vector_store["large"].as_retriever()],
+                        weights=[0.25, 0.25, 0.25, 0.25]
+                    )
+                else:
+                    hybrid_retriever = EnsembleRetriever(
+                        retrievers=[bm25_retriever["medium"], 
+                            vector_store["medium"].as_retriever()],
+                        weights=[0.5, 0.5]
+                    )
 
             # 3. Get web search results
             web_results = None
             if use_web_search:
-                t0 = time.time()
                 web_results_list = self._search_bing(query)
                 web_results = "\n\n".join(web_results_list)
-                self._log_time(t0, "[Pipeline] Bing search took")
 
             # 4. Get chat history
             history_chain = []
@@ -173,10 +175,7 @@ class RAGPipeline:
             history_chain = history_chain[::-1]
             
             # 5. Reform query for better retrieval/response
-            t0 = time.time()
             refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
-            self._log_time(t0, "[Pipeline] Query reformulation took")
-            print(f"[DEBUG] Refined query: {refined_query}")
 
             # 6. Invokes retrievers to get relevant chunks
             docs = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5) 
@@ -185,7 +184,6 @@ class RAGPipeline:
             chat_documents = []
             if chat_id:
                 chat_documents = self._process_chat_documents(chat_id)
-                print(f"[DEBUG] Found {len(chat_documents)} uploaded documents for chat {chat_id}")
 
             # 8. Combine regular docs with chat documents
             all_docs = docs + chat_documents
@@ -322,7 +320,6 @@ class RAGPipeline:
             for token in streamer:
                 yield token
 
-            self._log_time(start_total, "[Pipeline] Total pipeline time:")
             return None
         except Exception as e:
             yield f"\n[Error]: {e}\n"

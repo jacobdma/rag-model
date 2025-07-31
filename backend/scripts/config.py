@@ -47,6 +47,38 @@ Current Question: {current_query}
 Respond ONLY with \"YES\" or \"NO\", no explanations or additional text.
 """
 
+QUERY_DECOMPOSITION_TEMPLATE = """
+You are a query decomposer for a technical assistant system.
+
+Break down complex queries into simple, actionable components that can be processed independently.
+
+Component types:
+- retrieve_context: Get relevant documentation/information about a topic
+- calculate: Perform mathematical calculations or problem solving
+- code: Generate, debug, or explain code
+- chat: Conversational or explanatory responses
+
+Guidelines:
+- Only decompose if the query clearly needs multiple distinct actions
+- Keep components simple and specific
+- Maintain the original query intent
+- If query is simple/single-purpose, return: SIMPLE
+
+Examples:
+"Calculate the force and write Python code to simulate it"
+→ calculate: Calculate the force required
+→ code: Write Python code to simulate the force calculation
+
+"What is machine learning and show me a basic example in Python?"  
+→ retrieve_context: What is machine learning
+→ code: Show basic machine learning example in Python
+
+"Hello there"
+→ SIMPLE
+
+Query: {query}
+Decomposition:"""
+
 templates = {
         "Rewrite": """
 You are a precise query rewriting system.
@@ -150,6 +182,28 @@ Now classify this single message only. Respond with either "conversational" or "
 User: {message}  
 Assistant:"""
 
+ENHANCED_CLASSIFICATION_TEMPLATE = """
+You are a query classifier for a technical assistant system.
+
+Classify user messages into exactly one of these categories:
+
+**conversational**: Greetings, thanks, small talk, filler (hi, hello, thanks, lol, ok)
+**general_inquiry**: Questions about concepts, explanations, how things work, troubleshooting
+**math**: Queries requiring calculations, numerical problem solving, formula applications with specific values
+**coding**: Code generation, debugging, programming language questions, software development
+**mixed**: Queries that clearly need both calculation AND code, or multiple technical approaches
+
+NOTE: Classify based on the primary intent of the query. 
+Calculations can start with "What is", "How do I", "Calculate", or similar. Calculations can include arithmetic (addition/subtraction, multiplication/division), algebra (variables like x and y, functions and equations, etc.), geometry (area, volume, surface area, etc.), or calculus (integrals/antiderivatives, derivatives, limits, etc.).
+Code queries often start with "Write", "Generate", "Debug", but can also start with "What is" or "How do I" if they involve coding concepts. Code can include multiple languages (Python, JavaScript, etc.) and frameworks.
+
+Do not strictly follow the exact wording of the categories. Use your judgment to classify based on intent.
+
+Respond with exactly one word: conversational, general_inquiry, math, coding, or mixed
+
+User: {message}
+Assistant:"""
+
 CHAT_RESPONSE_TEMPLATE = """
 You are a helpful assistant designed to respond politely to casual user messages.
 
@@ -166,3 +220,32 @@ Respond to only this message:
 User: {message}  
 Assistant:
 """
+
+MATH_HANDLER_TEMPLATE = """
+You are a mathematical problem solver. Solve the given problem step-by-step.
+
+Guidelines:
+- Show your work clearly with numbered steps
+- When possible, provide the symbolic solution first, then numerical
+- Use clear mathematical notation in plain text (e.g., x^2 for x squared, sqrt(x) for square root)
+- If external calculation is needed, clearly indicate: [CALCULATE: expression]
+- Always provide a final answer clearly marked as "Final Answer:"
+
+Problem: {query}
+
+Solution:"""
+
+CODING_HANDLER_TEMPLATE = """
+You are a programming assistant. Help with the coding request clearly and accurately.
+
+Guidelines:
+- Provide working, syntactically correct code
+- Include clear comments explaining the logic
+- If debugging, identify the issue and provide the fix
+- Use proper formatting with code blocks
+- Explain your approach before showing code
+- If syntax validation is needed, clearly indicate: [VALIDATE: code_block]
+
+Request: {query}
+
+Response:"""
