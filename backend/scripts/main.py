@@ -74,9 +74,15 @@ CHAT_DOCUMENTS = {}
 # Exception handler for validation errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    raw_body = await request.body()
+    print(f"Validation failed for body: {raw_body.decode()}")
+    print(f"Validation error details: {exc.errors()}")
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors(), "body": exc.body}
+        content={
+            "detail": exc.errors(),
+            "body": json.loads(raw_body.decode())  # Parse and include raw body
+        }
     )
 
 # Load chats
@@ -117,9 +123,19 @@ async def set_config(config: Configuration):
     return {"message": "Config updated", "config": CURRENT_CONFIG}
 
 @app.post("/chat")
-async def stream_query(input: QueryInput, request: Request, authorization: str = Header(...)):
-    username = get_username_from_token(authorization.replace("Bearer ", ""))
-
+async def stream_query(
+    input: QueryInput, 
+    request: Request, 
+    authorization: str | None = Header(default=None)
+):
+    if authorization:
+        try:
+            username = get_username_from_token(authorization.replace("Bearer ", ""))
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    else:
+        username = "guest"
+    
     chat_id = input.chat_id or str(uuid.uuid4())
     assistant_reply = ""
 

@@ -39,7 +39,7 @@ export default function SettingsMenu({
   // ✅ Sync config
   useEffect(() => {
     const config = { temperature, model, tone }
-    fetch("http://localhost:8000/set-config", {
+    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/set-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),

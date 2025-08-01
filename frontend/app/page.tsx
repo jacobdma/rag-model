@@ -32,7 +32,6 @@ export default function Chat() {
   const [contextData, setContextData] = useState<any>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [contextIsOpen, setContextIsOpen] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -72,13 +71,8 @@ export default function Chat() {
       .catch(err => {
         console.error("Failed to validate token or load chats", err)
       })
-      .finally(() => {
-        setIsInitializing(false)
-      })
     } else {
-      // No stored credentials, show login form
       setShowLoginForm(true)
-      setIsInitializing(false)
     }
   }, [])
 
@@ -96,29 +90,50 @@ export default function Chat() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!input.trim()) return;
-  const userMessage: Message = { role: "user", content: input };
+    e.preventDefault();
+    if (!input.trim()) return;
+    const userMessage: Message = { role: "user", content: input };
 
-  setChats((prevChats) =>
-    prevChats.map((chat) =>
-      chat.id === activeChatId
-        ? { ...chat, history: [...chat.history, userMessage] }
-        : chat
-    )
-  );
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === activeChatId
+          ? { ...chat, history: [...chat.history, userMessage] }
+          : chat
+      )
+    );
 
-  setInput("");
-  setIsLoading(true);
-  setIsStreaming(true);
+    setInput("");
+    setIsLoading(true);
+    setIsStreaming(true);
 
-  const controller = new AbortController();
-  setStreamController(controller);
+    const controller = new AbortController();
+    setStreamController(controller);
 
+    // Debug log
+    const requestBody = {
+      query: userMessage.content,
+      history: history.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })),
+      use_web_search: useWebSearch,
+      use_double_retrievers: useDoubleRetrievers,
+      chat_id: activeChatId
+    };
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+      
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+  
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+  
       const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token && { "Authorization": `Bearer ${token}` })},
+        headers,
         body: JSON.stringify({ 
           query: userMessage.content, 
           history: history, 
@@ -268,9 +283,10 @@ export default function Chat() {
    function handleLogin(tok: string, user: string) {
     setToken(tok);
     setUsername(user);
+    localStorage.setItem("access_token", tok);  // Add this
+    localStorage.setItem("username", user);     // Add this
     setShowLoginForm(false);
     
-    // Load chats for the newly logged in user
     fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
       headers: { Authorization: `Bearer ${tok}` },
     })
@@ -295,7 +311,7 @@ export default function Chat() {
     setShowLoginForm(false);
     setToken(null);
     setUsername(null);
-    setChats([]); // Clear any existing chats
+    setChats([]);
     setActiveChatId(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");

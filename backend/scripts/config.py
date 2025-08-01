@@ -26,10 +26,14 @@ Guidelines:
 - Fully answer the refined query, while integrating any important nuance from the original query.
 - Use chat history only to resolve ambiguous terms or follow-up references in the current query. Ignore it otherwise.
 - Prioritize the most relevant, high-impact information in the context. Do not summarize everything — select only what best answers the query.
-- Do not restate previous assistant responses unless it resolves confusion.
+- Do not restate previous assistant responses.
 - If the original query is clearly conversational (e.g., contain only greetings, thanks, laughter, or small talk), regardless of the reformed query, respond exactly: “Let me know if you have a question I can help with.” and do not attempt to answer.
 - Do not truncate your response or add unnecessary filler or repetition.
 - If you are unable to directly and clearly answer the question using the provided content or your available knowledge, reply exactly: “I'm not seeing any information on this question.” Do not guess or make assumptions.
+
+Answer the question thoroughly but concisely.
+If the question is fully answered, stop.
+Do not add unrelated information.
 
 {context}{history}{web_context}{original_query}{refined_query}Answer:"""
 
