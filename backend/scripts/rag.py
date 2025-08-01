@@ -1,16 +1,12 @@
 # Standard library imports
 from collections import defaultdict
 import os
-import time
+import threading
 import yaml
 
 # Third-party imports
 import requests
-from langchain_community.vectorstores.faiss import FAISS
-from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
-from pydantic import BaseModel
 
 # Local imports
 from .llm_utils import get_llm_engine
@@ -23,21 +19,32 @@ from .handler import TechnicalHandler
 from .utils import Message
 
 class RAGPipeline:
+    lock = threading.Lock()
+    engine = None
+    hybrid_retriever = None
+    retriever = None
+    chunk_dict = None
+
     def __init__(self):
-        self._cached_bm25 = None
-        self._cached_vector = None
-        self._chunk_dict = None
-        self.engine = get_llm_engine()
-        self._hybrid_retriever = HybridRetriever()
+        with self.lock:
+            if RAGPipeline.engine is None:
+                RAGPipeline.engine = get_llm_engine()
+            if RAGPipeline.hybrid_retriever is None:
+                RAGPipeline.hybrid_retriever = HybridRetriever()
+        self.engine = RAGPipeline.engine
+        self.hybrid_retriever = RAGPipeline.hybrid_retriever
+
         with open("config.yaml", "r") as f:
             config = yaml.safe_load(f)
         self.folder_paths = config["DOCUMENTS"]
 
-    def _get_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS], dict[str, dict[str, list[Document]]]]:
-        if self._cached_bm25 is None or self._cached_vector is None or self._chunk_dict is None:
-            self._cached_bm25, self._cached_vector, self._chunk_dict = RetrieverBuilder(self.folder_paths).build_retrievers()
+    def _get_retrievers(self) -> tuple[HybridRetriever, dict[str, dict[str, list[Document]]]]:
+        with self.lock:
+            if self.retriever is None or self.chunk_dict is None:
+                builder = RetrieverBuilder(self.folder_paths)
+                RAGPipeline.retriever, RAGPipeline.chunk_dict = builder.build_retrievers()
 
-        return self._cached_bm25, self._cached_vector, self._chunk_dict
+        return RAGPipeline.retriever, RAGPipeline.chunk_dict
 
     def _search_bing(self, query: str, max_results: int = 5) -> list[str]:
         headers = {"Ocp-Apim-Subscription-Key": config.BING_API_KEY}
@@ -54,6 +61,7 @@ class RAGPipeline:
         source = os.path.normpath(source)
         if not source or source not in chunks_by_source:
             return [doc]
+        
         chunk_list = chunks_by_source[source]
         index = doc.metadata.get("chunk_number", 0)
         print(f"INDEX: {index}")
@@ -90,11 +98,10 @@ class RAGPipeline:
         for uploaded_doc in CHAT_DOCUMENTS[chat_id]:
             chunks = DocumentChunker().clean_paragraphs(
                 docs=[uploaded_doc.content],
-                chunk_size=1024,
-                chunk_overlap=100,
-                granularity="uploaded",
+                chunk_size=512,
+                chunk_overlap=50,
                 min_length=50,
-                source=f"{uploaded_doc.filename}"
+                source=f"Uploaded"
             )
             chat_docs.extend(chunks)
         
@@ -103,14 +110,14 @@ class RAGPipeline:
     def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True, chat_id: str = None):
         """Stream the RAG pipeline for interactive question answering."""
         # 1. Load retrievers
-        bm25_retriever, vector_store, chunk_dict = self._get_retrievers()
+        hybrid_retriever, chunk_dict = self._get_retrievers()
 
         try:
             # Enhanced classification
             classification_prompt = config.ENHANCED_CLASSIFICATION_TEMPLATE.format(message=query)
             classification = self.engine.prompt(
                 prompt=classification_prompt,
-                temperature=0.1
+                temperature=0.05
             ).strip().lower()
             
             print(f"[DEBUG] Query classified as: {classification}")
@@ -120,41 +127,17 @@ class RAGPipeline:
 
                 while True:
                     prompt = config.CHAT_RESPONSE_TEMPLATE.format(message=query).strip() + "\n\nAssistant:"
-                    streamer = self.engine.prompt(prompt=prompt, stream=True)
+                    streamer = self.engine.prompt(prompt=prompt, stream=True, temperature=0.7)
                     
-                    tokens = []
                     for token in streamer:
-                        tokens.append(token)
                         yield token
-                    
-                    full_response = "".join(tokens)
-                    if "User:" in full_response or "Assistant:" in full_response:
-                        continue
-                    break
-                return None
+                    return None
             
             elif classification in ["math", "coding", "mixed"]:
                 # Route to technical handler
                 for token in TechnicalHandler(self.engine, self._hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
                     yield token
                 return None
-            
-            else:  # general_inquiry or fallback
-                # Continue with existing RAG pipeline
-                if use_double_retrievers:
-                    hybrid_retriever = EnsembleRetriever(
-                        retrievers=[bm25_retriever["small"], 
-                                bm25_retriever["large"], 
-                                vector_store["small"].as_retriever(), 
-                                vector_store["large"].as_retriever()],
-                        weights=[0.25, 0.25, 0.25, 0.25]
-                    )
-                else:
-                    hybrid_retriever = EnsembleRetriever(
-                        retrievers=[bm25_retriever["medium"], 
-                            vector_store["medium"].as_retriever()],
-                        weights=[0.5, 0.5]
-                    )
 
             # 3. Get web search results
             web_results = None
@@ -190,119 +173,49 @@ class RAGPipeline:
 
             # 7. Get surrounding documents
             retrieved_info = []
-            context_groups = []  # Each group: dict with keys: 'source', 'granularity', 'chunks', 'content_set', 'total_len', 'original_order', 'metadata_list'
-            group_counter = 0
-
+            context_list = []
+            
             for doc in all_docs:
-                if doc.metadata.get("granularity") == "uploaded":
+                if doc.metadata.get("source") == "Uploaded":
                     context_chunks = [doc]
                 else:
-                    context_chunks = self.get_surrounding_chunks(doc, chunk_dict[doc.metadata["granularity"]])
+                    # Use cached version with hash for content
+                    doc_hash = hash(doc.page_content)
+                    context_chunks = self.get_surrounding_chunks_cached(
+                        str(doc_hash), 
+                        doc.metadata.get("source", ""), 
+                        doc.metadata.get("chunk_number", 0),
+                        chunk_dict,
+                        target_chars=800  # Reduced target
+                    )
 
-                # Group by contiguous chunks from the same source and granularity
-                if not context_chunks:
-                    continue
-
-                source = os.path.normpath(context_chunks[0].metadata.get("source", ""))
-                granularity = context_chunks[0].metadata.get("granularity", "")
-                chunk_numbers = [c.metadata.get("chunk_number", 0) for c in context_chunks]
-                group_id = (source, min(chunk_numbers), max(chunk_numbers), granularity)
-                group_content = "".join([c.page_content for c in context_chunks])
-
-                content_set = set()
-                for c in context_chunks:
-                    content_set.update(c.page_content.splitlines())
-
-                context_groups.append({
-                    "group_id": group_id,
-                    "source": source,
-                    "granularity": granularity,
-                    "chunks": context_chunks,
-                    "content": group_content,
-                    "content_set": set(group_content),
-                    "total_len": len(group_content),
-                    "original_order": group_counter,
-                    "metadata_list": [c.metadata for c in context_chunks],
-                })
-                group_counter += 1
-
-            source_to_groups = defaultdict(list)
-            for group in context_groups:
-                source_to_groups[group["source"]].append(group)
-
-            deduped_groups = []
-            for source, groups in source_to_groups.items():
-                keep = [True] * len(groups)
-                for i, g1 in enumerate(groups):
-                    g1_content = set(c.page_content for c in g1["chunks"])
-                    union_others = set()
-                    for j, g2 in enumerate(groups):
-                        if i == j:
-                            continue
-                        union_others.update(c.page_content for c in g2["chunks"])
-                    if g1_content and g1_content.issubset(union_others) and len(union_others) > len(g1_content):
-                        keep[i] = False
-                filtered_groups = [g for k, g in zip(keep, groups) if k]
-
-                # Step 2: Merge contiguous/overlapping groups
-                def min_chunk(g):
-                    return min(c.metadata["chunk_number"] for c in g["chunks"])
-                filtered_groups.sort(key=min_chunk)
-                merged = []
-                for group in filtered_groups:
-                    group_chunk_numbers = set(c.metadata["chunk_number"] for c in group["chunks"])
-                    if not merged:
-                        merged.append(group)
-                    else:
-                        last = merged[-1]
-                        last_chunk_numbers = set(c.metadata["chunk_number"] for c in last["chunks"])
-                        if last_chunk_numbers & group_chunk_numbers or (
-                            max(last_chunk_numbers) + 1 >= min(group_chunk_numbers) and min(group_chunk_numbers) <= max(last_chunk_numbers) + 1
-                        ):
-                            all_chunks = last["chunks"] + group["chunks"]
-                            seen = set()
-                            unique_chunks = []
-                            for c in sorted(all_chunks, key=lambda c: c.metadata["chunk_number"]):
-                                num = c.metadata["chunk_number"]
-                                if num not in seen:
-                                    unique_chunks.append(c)
-                                    seen.add(num)
-                            last["chunks"] = unique_chunks
-                            last["content"] = ''.join([c.page_content for c in unique_chunks])
-                        else:
-                            merged.append(group)
-                deduped_groups.extend(merged)
-
-            # Sort deduped groups by original order (first chunk's original order)
-            deduped_groups.sort(key=lambda g: g["original_order"])
-
-            # Build retrieved_info and context_list from deduped groups
-            retrieved_info = []
-            context_list = []
-            for group in deduped_groups:
                 retrieved_info.append({
                     "retrieved_chunk": {
-                        "content": group["chunks"][0].page_content,
-                        "metadata": group["chunks"][0].metadata
+                        "content": doc.page_content[:500],  # Truncate content
+                        "metadata": doc.metadata
                     },
                     "surrounding_chunks": [
                         {
-                            "content": c.page_content,
+                            "content": c.page_content[:300],  # Truncate surrounding
                             "metadata": c.metadata
                         }
-                        for c in group["chunks"]
+                        for c in context_chunks[:3]  # Limit surrounding chunks
                     ]
                 })
-                context_list.append(group["content"])
-            context = ''.join(context_list)
-            yield retrieved_info
+                
+                # Combine context with length limit
+                combined_content = ''.join([c.page_content for c in context_chunks])
+                context_list.append(combined_content[:1000])  # Truncate combined content
 
+            context = '\n\n'.join(context_list)
+            yield retrieved_info
+    
             # 8. Constructs prompt
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}\n\n" if content else ""
  
             history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
-            context = ''.join(context)
+
             prompt = config.RESPONSE_PREFIX.format(
                 context=format_block("Context", context),
                 history=format_block("Chat History", "\n".join(history_lines)),

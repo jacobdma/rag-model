@@ -12,14 +12,6 @@ from pptx import Presentation
 
 _pdf_lock = threading.Lock()
 
-def log_problem(reason, filename, duration=None, notes=""):
-    script_dir = Path(__file__).resolve().parent
-    log_path = script_dir / "logs" / "problem_files.tsv"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    duration_str = f"{duration:.2f}" if duration else ""
-    with open(log_path, "a", encoding="utf-8") as log_file:
-        log_file.write(f"{reason}\t{filename}\t{duration_str}\t{notes}\n")
-
 def read_docx(f):
     if isinstance(f, Path):
         text = docx2txt.process(str(f))
@@ -55,7 +47,7 @@ def read_pdf(f, filename):
         with fitz.open(stream=f.read(), filetype="pdf") as doc:
             text_parts = [page.get_text() for page in doc]  # type: ignore
     if time.time() - start_pdf > 900:
-        log_problem("STALLED_LOAD", filename, time.time() - start_pdf)
+        return None
     return "\n".join(text_parts)
 
 def read_csv(f):
@@ -74,9 +66,8 @@ def read_csv(f):
         return pd.read_csv(f, encoding="latin1").to_string(index=False)
 
 class FileReader:
-    def __init__(self, _supported_exts, _skip_files):
+    def __init__(self, _supported_exts):
         self._supported_exts = _supported_exts
-        self._skip_files = _skip_files
         
     def read_docs(self, file: Path):
         readers = {
@@ -88,7 +79,7 @@ class FileReader:
         }
         filename = str(file)
         ext = file.suffix.lower()
-        if filename in self._skip_files or ext not in self._supported_exts:
+        if ext not in self._supported_exts:
             return None
         with open(file, "rb") as f:
             file_bytes = f.read()

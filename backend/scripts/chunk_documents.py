@@ -6,7 +6,7 @@ import logging
 import json
 from collections import defaultdict
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from concurrent.futures import ProcessPoolExecutor
 
 # Library specific imports
@@ -24,23 +24,9 @@ class DocumentChunker:
         self.folder_paths = folder_paths
         self.loader = DocumentLoader()
         self._supported_exts = {".docx", ".pptx", ".txt", ".pdf", ".csv"} # List of supported extensions to filter
-        self._skip_files = self._load_empty_file_skiplist()
-
-    @staticmethod
-    def _load_empty_file_skiplist(log_path: Path = Path("logs/problem_files.tsv")) -> set:
-        if not log_path.exists():
-            return set()
-    
-        skip_files = set()
-        with open(log_path, encoding="utf-8") as f:
-            for line in f:
-                parts = line.strip().split("\t")
-                if len(parts) >= 2 and parts[0] == "EMPTY_TEXT":
-                    skip_files.add(parts[1])
-        return skip_files
 
     def clean_paragraphs(
-        self, docs: list[str] | list[Document], chunk_size: int, chunk_overlap: int, granularity = None, min_length: int = 50,
+        self, docs: list[str] | list[Document], chunk_size: int, chunk_overlap: int, min_length: int = 50,
         source: str = ""
     ) -> list[Document]:
         cleaned_chunks = []
@@ -72,8 +58,6 @@ class DocumentChunker:
                         "chunk_number": chunk_number,
                         "source": source,
                     }
-                    if granularity:
-                        metadata["granularity"] = granularity
                     doc = Document(page_content=chunk, metadata=metadata)
                     cleaned_chunks.append(doc)
                     chunk_number += 1
@@ -84,8 +68,8 @@ class DocumentChunker:
         return cleaned_chunks
     
     # Runs document chunking in parallel for faster processing
-    def get_chunks(self, granularity: str, chunk_size: int, chunk_overlap: int):
-        cache_path = CACHE_DIR / f"chunked_docs_{granularity}.json"
+    def get_chunks(self, chunk_size: int, chunk_overlap: int):
+        cache_path = CACHE_DIR / f"chunked_docs.json"
         parsed_cache_path = CACHE_DIR / "parsed_text_docs.json"
 
         # 1. Try to load chunked docs from cache
@@ -111,23 +95,24 @@ class DocumentChunker:
             all_files = []
             for folder in self.folder_paths:
                 all_files.extend(self.loader.gather_supported_files(folder))
+            print(f"[DEBUG] Total discovered files: {len(all_files)}")
             print(f"[DEBUG] Found {len(all_files)} total files to parse.")
-            with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
-                 ThreadPoolExecutor(max_workers=32) as executor:
-                futures = {executor.submit(FileReader(self._supported_exts, self._skip_files).read_docs, f): f for f in all_files}
-                for future in as_completed(futures):
-                    try:
-                        result = future.result()
-                        if result is None:
-                            continue
-                        text, filename = result
-                        if filename is not None:
-                            filename = os.path.normpath(filename)
-                        raw_documents.append((text, filename))
-                    except Exception as e:
-                        logging.exception(f"[Thread Error] {e}")
-                    pbar.update(1)
+            reader = FileReader(self._supported_exts)
+            skipped = 0
+            for f in tqdm(all_files, desc="Parsing documents", unit="file"):
+                try:
+                    result = reader.read_docs(f)
+                    if result is None:
+                        skipped += 1
+                        continue
+                    text, filename = result
+                    if filename is not None:
+                        filename = os.path.normpath(filename)
+                    raw_documents.append((text, filename))
+                except Exception as e:
+                    logging.exception(f"[Read Error] {e}")
             print(f"[DEBUG] ← Total successfully loaded documents: {len(raw_documents)}")
+            print(f"[DEBUG] ← Total skipped documents: {skipped}")
             try:
                 parsed_cache_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(parsed_cache_path, "w", encoding="utf-8") as f:
@@ -142,10 +127,10 @@ class DocumentChunker:
         results = []
         with ProcessPoolExecutor(max_workers=8) as executor:
             futures = [
-                executor.submit(self.clean_paragraphs, [text], chunk_size=chunk_size, chunk_overlap=chunk_overlap, granularity=granularity, min_length=(chunk_size // 10), source=filename)
+                executor.submit(self.clean_paragraphs, [text], chunk_size=chunk_size, chunk_overlap=chunk_overlap, min_length=(chunk_size // 10), source=filename)
                 for text, filename in raw_documents
             ]
-            for future in tqdm(as_completed(futures), total=len(raw_documents), desc=f"Chunking documents with {granularity} granularity"):
+            for future in tqdm(as_completed(futures), total=len(raw_documents), desc=f"Chunking documents"):
                 try:
                     results.extend(future.result())
                 except Exception as e:

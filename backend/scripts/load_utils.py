@@ -44,9 +44,9 @@ class DocumentLoader:
             root_str = str(root_path).lower()
             if any(root_str.startswith(f) for f in ignore_folders):
                 continue
-            dirs[:] = [d for d in dirs if not any(kw in d.lower() for kw in ignore_keywords)] # Filter out ignored keywords
+            dirs[:] = [d for d in dirs if not any(kw in d.lower() for kw in ignore_keywords)]
             for name in files:
-                if any(kw in name.lower() for kw in ignore_keywords): # Skip files with ignored keywords
+                if any(kw in name.lower() for kw in ignore_keywords):
                     continue
                 file_paths.append(root_path / name)
         return file_paths
