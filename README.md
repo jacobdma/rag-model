@@ -85,7 +85,8 @@ uvicorn scripts.main:app --host 0.0.0.0 --port 8000
 
 ### 2. Frontend
 ```
-# Inside the /frontend directory
+# Navigate to frontend directory
+
 cd rag_model/frontend
 npm install
 npm run dev
@@ -94,12 +95,23 @@ npm run dev
 
 ```
 
+### NOTE
+
+The app also contains ```start.bat```, ```frontend.bat```, and ```backend.bat``` files for development convenience. These can be run simply:
+```
+# Navigate to project directory
+cd rag_model
+
+# Example usage (start.bat will run both front- and backend)
+start.bat
+
+```
+
 ## Configuration
 
 The assistant supports real-time adjustment of LLM parameters via the floating SettingsMenu:
 - Model: Switch between supported Hugging Face models
 - Temperature: Control generation creativity
-- LLM Reranking: Toggle slow but more accurate reranking
 - Tone: Choose between formal, neutral, casual
 These are sent via `POST /set-config` to the FastAPI backend.
 
@@ -108,15 +120,17 @@ These are sent via `POST /set-config` to the FastAPI backend.
 ```
 /backend
 ├── scripts/
-│   ├── chunk_documents.py          # Chunks documents in parallel
+│   ├── chunk_documents.py          # Document chunking and processing
 │   ├── config.py                   # Prompt templates & constants
 │   ├── file_readers.py             # File reading functions
+│   ├── handler.py                  # Routes queries by intent (math, code, general inquiry, etc)
 │   ├── hybrid_retrievers.py        # Retrieves content based on hybrid retriever
 │   ├── llm_utils.py                # Model loading and prompt handling
 │   ├── load_utils.py               # Network share and document ingestion
 │   ├── main.py                     # FastAPI app
 │   ├── rag.py                      # Main pipeline logic
-│   └── retriever_builder.py        # Constructs and stores retrievers with persistance
+│   ├── retriever_builder.py        # Constructs and stores retrievers with persistance
+│   └── utils.py                    # Models
 
 /frontend
 ├── app/
@@ -124,11 +138,91 @@ These are sent via `POST /set-config` to the FastAPI backend.
 │   ├── page.tsx                # Main chat page
 │   ├──components/
 │   │   ├── chat.tsx                # Message list + chat input
+│   │   ├── ContextWindow.tsx       # Displays retrieved content
+│   │   ├── DocumentUpload.tsx      # Document uploading window
 │   │   ├── Dropdown.tsx            # Selection dropdown menu
+│   │   ├── LoginForm.tsx           # Login form for LDAP authentication
 │   │   ├── SettingsMenu.tsx        # Model configuration menu
-│   │   └── Sidebar.tsx             # Chat list + new chat
+│   │   ├── Sidebar.tsx             # Chat list + new chat
+│   │   ├── Slider.tsx              # Sidebar slider component
+│   │   └── Toggle.tsx              # Sidebar option toggle component
+
 
 ```
+
+## Development Configuration
+
+### config.yaml
+
+Create file "config.yaml" inside of backend/
+
+**DOCUMENTS** (recommended) will be all files the RAG Pipeline will have access to.
+
+**BING_API_KEY** (optional) is the user or organization API Key for the Bing search API.
+
+**MODEL_TOKEN** (required) is the user or organization HuggingFace token which enables model usage.
+
+**IGNORE_FOLDERS** (optional) will be ignored paths inside of DOCUMENTS that the RAG Pipeline will not have access to.
+
+**IGNORE_KEYWORDS** (optional) are a list of keywords that will be ignored if contained in the path or filename.
+
+**ldap** (required, but will be made optional) is the LDAP configuration for your organization.
+NOTE: **ldap** contains **server**, **user**, **password**, **search_filter**, and **base_dn** parameters. 
+| Parameter      | Description                                      |
+|----------------|--------------------------------------------------|
+| server         | LDAP server hostname or URI (e.g. ldap://host)    |
+| user           | DN or user principal for bind (cn=John,... )      |
+| password       | Bind password                                     |
+| search_filter  | RFC 4515 filter for selecting entries             |
+| base_dn        | Starting DN for search (e.g. dc=example,dc=com)   |
+
+Consult LDAP documentation for more information: https://ldap3.readthedocs.io/en/latest/
+
+**mongo_uri** (required) is the mongo port for database access
+
+**sharepoint** (required, but will be made optional) is the on-prem SharePoint credentials for organization file access.
+NOTE: **sharepoint** contains **domain**, **user**, and **password** parameters.
+
+#### config.yaml example:
+```
+DOCUMENTS:
+  - /Users/User/SampleDocuments/
+
+BING_API_KEY: None
+
+MODEL_TOKEN: my_model_token
+
+IGNORE_FOLDERS:
+  - /Users/User/SkippedDocuments/
+
+IGNORE_KEYWORDS:
+  - skip
+  - archive
+
+ldap:
+  server: "my_ldap_server"
+  user: "my_ldap_user"
+  password: "password"
+  search_filter: "my_ldap_filter"
+  base_dn: "my_ldap_base_dn"
+
+mongo_uri: mongodb://localhost:12345
+
+sharepoint:
+  domain: "sp_domain"
+  user: "sp_user"
+  password: "password"
+
+```
+
+### .env
+
+Create file .env in frontend/
+
+**NEXT_PUBLIC_HOST_IP** (required) is the IP of the hosting server.
+
+This will look like:
+```NEXT_PUBLIC_HOST_IP: my_host_ip```
 
 ## License Copies
 
@@ -143,5 +237,5 @@ This software is provided "as-is" and intended for internal use only. External d
 ## Author
 
 Developed by Jacob Ma
-Machine Learning Intern @ IHI, Summer 2025
-Contact: jacobdma218@gmail.com
+SWE/ML Intern @ IHI, Summer 2025
+Contact: jma443@gatech.edu

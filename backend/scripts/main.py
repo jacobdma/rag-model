@@ -81,12 +81,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={
             "detail": exc.errors(),
-            "body": json.loads(raw_body.decode())  # Parse and include raw body
+            "body": json.loads(raw_body.decode())
         }
     )
 
 # Load chats
-client = MongoClient(config["mongo_uri"])  # add to config.yaml
+client = MongoClient(config["mongo_uri"])
 db = client["chat_app"]
 chats_collection = db["chats"]
 

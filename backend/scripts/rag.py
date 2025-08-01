@@ -135,7 +135,7 @@ class RAGPipeline:
             
             elif classification in ["math", "coding", "mixed"]:
                 # Route to technical handler
-                for token in TechnicalHandler(self.engine, self._hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
+                for token in TechnicalHandler(self.engine, self.hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
                     yield token
                 return None
 
@@ -161,7 +161,7 @@ class RAGPipeline:
             refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
 
             # 6. Invokes retrievers to get relevant chunks
-            docs = self._hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5) 
+            docs = self.hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5) 
 
              # 7. Get uploaded chat documents if chat_id provided
             chat_documents = []
@@ -179,15 +179,7 @@ class RAGPipeline:
                 if doc.metadata.get("source") == "Uploaded":
                     context_chunks = [doc]
                 else:
-                    # Use cached version with hash for content
-                    doc_hash = hash(doc.page_content)
-                    context_chunks = self.get_surrounding_chunks_cached(
-                        str(doc_hash), 
-                        doc.metadata.get("source", ""), 
-                        doc.metadata.get("chunk_number", 0),
-                        chunk_dict,
-                        target_chars=800  # Reduced target
-                    )
+                    context_chunks = self.get_surrounding_chunks(doc, chunk_dict)
 
                 retrieved_info.append({
                     "retrieved_chunk": {

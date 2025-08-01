@@ -75,6 +75,7 @@ pydantic-settings - MIT - https://github.com/pydantic/pydantic-settings
 pydantic_core - MIT - https://github.com/pydantic/pydantic-core  
 pymongo - Apache-2.0 - https://www.mongodb.org
 PyMuPDF - GNU AFFERO GPL 3.0 or Artifex Commercial License - https://github.com/pymupdf/PyMuPDF  
+pytesseract - Apache License 2.0 - https://github.com/madmaze/pytesseract
 python-dateutil - Dual License - https://github.com/dateutil/dateutil  
 python-dotenv - BSD 3-Clause - https://github.com/theskumar/python-dotenv  
 python-jose - MIT - http://github.com/mpdavis/python-jose

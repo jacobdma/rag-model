@@ -5,8 +5,8 @@ import os
 import logging
 import json
 from collections import defaultdict
-from pathlib import Path
 from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import ProcessPoolExecutor
 
 # Library specific imports
@@ -96,21 +96,25 @@ class DocumentChunker:
             for folder in self.folder_paths:
                 all_files.extend(self.loader.gather_supported_files(folder))
             print(f"[DEBUG] Total discovered files: {len(all_files)}")
-            print(f"[DEBUG] Found {len(all_files)} total files to parse.")
             reader = FileReader(self._supported_exts)
             skipped = 0
-            for f in tqdm(all_files, desc="Parsing documents", unit="file"):
-                try:
-                    result = reader.read_docs(f)
-                    if result is None:
-                        skipped += 1
-                        continue
-                    text, filename = result
-                    if filename is not None:
-                        filename = os.path.normpath(filename)
-                    raw_documents.append((text, filename))
-                except Exception as e:
-                    logging.exception(f"[Read Error] {e}")
+            with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
+                ProcessPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(reader.read_docs, f): f for f in all_files}
+                for future in as_completed(futures):
+                    try:
+                        result = future.result()
+                        if result is None:
+                            skipped += 1
+                            continue
+                        text, filename = result
+                        if filename is not None:
+                            filename = os.path.normpath(filename)
+                        raw_documents.append((text, filename))
+                    except Exception as e:
+                        logging.exception(f"[Thread Error] {e}")
+                    pbar.update(1)
+            print(f"[DEBUG] ← Total successfully loaded documents: {len(raw_documents)}")
             print(f"[DEBUG] ← Total successfully loaded documents: {len(raw_documents)}")
             print(f"[DEBUG] ← Total skipped documents: {skipped}")
             try:

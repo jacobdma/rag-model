@@ -3,11 +3,13 @@ import threading
 import time
 from io import BytesIO, StringIO
 from pathlib import Path
+from PIL import Image
 
 # Third-party imports
 import docx2txt
 import fitz
 import pandas as pd
+import pytesseract
 from pptx import Presentation
 
 _pdf_lock = threading.Lock()
@@ -39,15 +41,29 @@ def read_txt(f):
         return f.decode("utf-8", errors="ignore")
     return f.read().decode("utf-8", errors="ignore")
 
-def read_pdf(f, filename):
+def read_pdf(f):
     start_pdf = time.time()
     if hasattr(f, "seek"):
         f.seek(0)
+        
     with _pdf_lock:
         with fitz.open(stream=f.read(), filetype="pdf") as doc:
-            text_parts = [page.get_text() for page in doc]  # type: ignore
+            text_parts = []
+            for page in doc:
+                text = page.get_text()
+                if not text.strip():
+                    pix = page.get_pixmap(dpi=150)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    text = pytesseract.image_to_string(img)
+                if not text.strip():
+                    pix = page.get_pixmap(dpi=200)
+                    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    text = pytesseract.image_to_string(img)
+                text_parts.append(text)
+                
     if time.time() - start_pdf > 900:
         return None
+        
     return "\n".join(text_parts)
 
 def read_csv(f):
@@ -74,7 +90,7 @@ class FileReader:
             ".docx": read_docx,
             ".pptx": read_pptx,
             ".txt": read_txt,
-            ".pdf": lambda b: read_pdf(BytesIO(b), filename),
+            ".pdf": lambda b: read_pdf(BytesIO(b)),
             ".csv": read_csv,
         }
         filename = str(file)
