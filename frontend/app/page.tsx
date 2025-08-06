@@ -443,7 +443,7 @@ export default function Chat() {
         </div>
 
         {isEmpty && (
-          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto text-responsive-xs">
+          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto text-responsive-sm">
             <strong className="text-neutral-700 dark:text-neutral-300">Disclaimer:</strong> This system uses AI-generated content. The information provided may be incomplete, outdated, or incorrect.{" "}
             <strong className="text-neutral-700 dark:text-neutral-300">
               Do not rely on this tool as a sole source for decision-making. Always verify with official documentation and authoritative sources.

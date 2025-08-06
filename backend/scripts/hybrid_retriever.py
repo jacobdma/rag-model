@@ -1,4 +1,5 @@
 # Standard library imports
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -17,18 +18,12 @@ class HybridRetriever:
         Rewrites query through a three stage process
         """
         # 1. Rewrites and cleans up query
+        t0 = time.time()
         rewrite_prompt = templates["Rewrite"].format(query=query)
-        rewrite_output = prompt(rewrite_prompt)
+        rewrite_output = prompt(rewrite_prompt, stream=False, temperature=0.1, max_new_tokens=50)
+        print(f"[Query Reform] Rewrite completed in {time.time() - t0:.2f}s")
 
-        # 2. Decomposes the query into sub queries
-        subquery_prompt = templates["Subquery Decomposition"].format(query=rewrite_output)
-        subquery_output = prompt(subquery_prompt)
-
-        # 3. Condenses sub queries into searchable final query
-        condensed_prompt = templates["Condense"].format(query=subquery_output)
-        condensed_output = prompt(condensed_prompt)
-
-        return condensed_output
+        return rewrite_output
     
     def retrieve_context(self, query: str, hybrid_retriever: EnsembleRetriever, max_results: int = 5) -> list[Document]:
         """

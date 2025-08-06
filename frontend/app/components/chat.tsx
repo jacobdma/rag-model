@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useRef, useEffect } from "react"
-import { Search, ArrowUp, Square, Edit2, Check, X } from "lucide-react"
+import { Search, Edit2 } from "lucide-react"
 
 export interface Message {
   role: "user" | "assistant"
@@ -60,7 +60,7 @@ export function MessageList({
         <div key={index} className={`mb-4 group ${message.role === "user" ? "text-right" : "text-left"}`}>
           {editingMessageIndex === index ? (
             // Editing mode
-            <div className="w-full rounded-3xl p-3
+            <div className="w-full rounded-lg p-3
                     bg-neutral-200 dark:bg-neutral-800
                     text-neutral-700 dark:text-neutral-300
                     font-medium text-responsive-base">
@@ -75,7 +75,7 @@ export function MessageList({
                   <button
                     type="button"
                     onClick={onCancelEdit}
-                    className="flex items-center gap-1 px-3 py-2 rounded-3xl text-responsive-base
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-responsive-base
                       bg-white dark:bg-neutral-700
                       border border-neutral-300 dark:border-neutral-700
                       text-neutral-700 dark:text-neutral-300 font-semibold
@@ -86,7 +86,7 @@ export function MessageList({
                   <button
                     type="submit"
                     disabled={!editingContent.trim()}
-                    className="flex items-center gap-1 px-3 py-2 rounded-3xl
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg
                       bg-green-500 hover:bg-green-600 disabled:bg-neutral-400
                       font-semibold text-white text-responsive-base"
                   >
@@ -98,7 +98,7 @@ export function MessageList({
           ) : (
             // Normal message display
             <div className="relative">
-              <div className={`inline-block px-2 py-2 text-responsive-base rounded-3xl break-words whitespace-pre-wrap text-left${
+              <div className={`inline-block px-2 py-2 text-responsive-base rounded-lg break-words whitespace-pre-wrap text-left${
                 message.role === "user" 
                 ? `
                   bg-neutral-200                  
@@ -123,13 +123,13 @@ export function MessageList({
               {message.role === "user" && !isStreaming && !isLoading && (
                 <button
                   onClick={() => onEditMessage(index, message.content)}
-                  className="absolute right-1 top-2 opacity-100 p-1 rounded-3xl
+                  className="absolute right-1 top-2 opacity-100 p-1 rounded-lg
                     text-neutral-500 hover:text-neutral-700 
                     dark:text-neutral-400 dark:hover:text-neutral-200
                     hover:bg-neutral-200 dark:hover:bg-neutral-700"
                   title="Edit message"
                 >
-                  <Edit2 size={14} />
+                  <Edit2 size={14}/>
                 </button>
               )}
             </div>
@@ -169,7 +169,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
       border border-neutral-300 
       dark:border-neutral-700 
       p-2
-      rounded-3xl
+      rounded-lg
       mt-4
       text-responsive-lg
       ">
@@ -200,7 +200,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
           <button
             type="button"
             onClick={() => setUseWebSearch(!useWebSearch)}
-            className={`flex items-center gap-1 px-3 py-2 rounded-3xl ${
+            className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
               useWebSearch
                 ? `
                   bg-blue-50
@@ -227,17 +227,17 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
             <button
               type="button"
               onClick={onStop}
-              className="p-2 rounded-full bg-red-500 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
+              className="p-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
             >
-              <Square size={16} fill="white"/>
+              <span className="text-responsive-base font-semibold">Stop</span>
             </button>
           ) : (
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="p-2 rounded-full bg-green-500 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
+              className="px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
             >
-              <ArrowUp size={16} />
+              <span className="text-responsive-base font-semibold">Send</span>
             </button>
           )}
         </div>

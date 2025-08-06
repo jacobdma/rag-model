@@ -74,7 +74,7 @@ export function ContextWindow({
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-neutral-900 m-2 mt-0 rounded-lg">
-          <h3 className="flex-shrink-0 text-responsive-base font-medium p-3 pb-1 text-neutral-700 dark:text-neutral-300">
+          <h3 className="flex-shrink-0 text-responsive-lg font-medium p-3 pb-1 text-neutral-700 dark:text-neutral-300">
             Sources
           </h3>
           
@@ -143,7 +143,7 @@ export function ContextWindow({
               })
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center h-full">
-                <FolderX className="size-16 mx-auto text-neutral-400" />
+                <FolderX className="size-16 mx-auto text-red-400" />
                 <div className="text-neutral-400 text-center py-8">
                   No retrieved data
                 </div>

@@ -48,8 +48,7 @@ class LLMEngine:
     
     def cleanup(self):
         if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-                gc.collect()
+            gc.collect()
     
     def prompt(self, prompt: str, max_new_tokens: int = 512, temperature: float = 0.2, stream: bool = False) -> TextIteratorStreamer | str:
         """

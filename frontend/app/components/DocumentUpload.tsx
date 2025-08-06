@@ -144,7 +144,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
 
   return (
     <div className="bg-white dark:bg-neutral-900 p-3 rounded-lg mb-2">
-      <h3 className="text-responsive-base font-medium mb-3 text-neutral-700 dark:text-neutral-300">
+      <h3 className="text-responsive-lg font-medium mb-3 text-neutral-700 dark:text-neutral-300">
         Chat Documents
       </h3>
       
@@ -162,7 +162,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
           onDragLeave={handleDragLeave}
           onClick={handleFileSelect}
         >
-          <Upload className="size-12 mx-auto mb-2 text-neutral-400" />
+          <Upload className="size-12 mx-auto mb-2 text-blue-400" />
           <p className="text-responsive-sm text-neutral-500 dark:text-neutral-400">
             Drop files here or click to upload
           </p>

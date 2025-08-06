@@ -129,8 +129,7 @@ export function Sidebar({
       <div className="flex flex-col items-center gap-4 py-4">
         <button
           onClick={createNewChat}
-          disabled={currentChatIsEmpty}
-          className="p-2 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100 disabled:opacity-50"
+          className="p-2 rounded-lg bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-neutral-50"
           title="New Chat"
         >
           <SquarePen size={20} />
@@ -138,7 +137,7 @@ export function Sidebar({
         
         <button
           onClick={() => setChatModalOpen(true)}
-          className="p-2 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+          className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600"
           title="Chat History"
         >
           <MessageCircle size={20} />
@@ -229,7 +228,7 @@ export function Sidebar({
           <div className="absolute inset-0 backdrop-blur-[6px]" />
           <div 
             ref={chatModalRef}
-            className="relative bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-6 z-10 max-h-[80vh] flex flex-col"
+            className="relative bg-white dark:bg-neutral-900 rounded-lg shadow-2xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-6 z-10 max-h-[80vh] flex flex-col"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="relative flex-1 mr-3">
@@ -239,7 +238,7 @@ export function Sidebar({
                   placeholder="Search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 text-sm bg-neutral-200 dark:bg-neutral-800 rounded-3xl text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none"
+                  className="w-full pl-10 pr-3 py-2 text-sm bg-neutral-200 dark:bg-neutral-800 rounded-lg text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none"
                 />
               </div>
               <button
@@ -248,7 +247,7 @@ export function Sidebar({
                   setChatModalOpen(false)
                 }}
                 disabled={currentChatIsEmpty}
-                className="flex items-center gap-2 p-2 rounded-3xl hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400"
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400"
                 title="New Chat"
               >
                 <SquarePen className="size-5" />
@@ -258,7 +257,7 @@ export function Sidebar({
             <div className="flex-1 overflow-y-auto">
               {filteredChats.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center h-full mt-4">
-                  {searchQuery ? <SearchX className="size-12 mx-auto text-neutral-400" /> : <X className="size-12 mx-auto text-neutral-400" />}
+                  {searchQuery ? <SearchX className="size-12 mx-auto text-red-400" /> : <X className="size-12 mx-auto text-neutral-400" />}
                   <p className="text-neutral-400 text-center py-4">
                     {searchQuery ? "No chats found" : "No chats yet"}
                   </p>
@@ -267,7 +266,7 @@ export function Sidebar({
                 <ul className="space-y-2">
                   {filteredChats.map((chat) => (
                     <li key={chat.id}>
-                      <div className={`group flex items-center rounded-3xl text-sm ${
+                      <div className={`group flex items-center rounded-lg text-sm ${
                         chat.id === activeChatId
                           ? `bg-neutral-200 dark:bg-neutral-700 font-semibold text-neutral-800 dark:text-neutral-100`
                           : `hover:bg-neutral-200 dark:hover:bg-neutral-800 font-medium text-neutral-600 dark:text-neutral-400`

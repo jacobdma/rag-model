@@ -1,6 +1,7 @@
 # Standard library imports
 import os
 import threading
+import time
 import yaml
 
 # Third-party imports
@@ -108,22 +109,24 @@ class RAGPipeline:
 
     def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True, chat_id: str = None):
         """Stream the RAG pipeline for interactive question answering."""
+        start_time = time.time()
         # 1. Load retrievers
+        t0 = time.time()
         hybrid_retriever, chunk_dict = self._get_retrievers()
-
+        print(f"[1. Retrieval] Loaded retrievers in {time.time() - t0:.2f}s")
         try:
             # Enhanced classification
+            t0 = time.time()
             classification_prompt = config.ENHANCED_CLASSIFICATION_TEMPLATE.format(message=query)
             classification = self.engine.prompt(
                 prompt=classification_prompt,
                 temperature=0.05
             ).strip().lower()
-            
-            print(f"[DEBUG] Query classified as: {classification}")
+            print(f"Classification: {classification}")
+            print(f"[2. Classification] Completed in {time.time() - t0:.2f}s")
             
             # Route based on classification
             if classification == "conversational":
-
                 while True:
                     prompt = config.CHAT_RESPONSE_TEMPLATE.format(message=query).strip() + "\n\nAssistant:"
                     streamer = self.engine.prompt(prompt=prompt, stream=True, temperature=0.7)
@@ -139,12 +142,15 @@ class RAGPipeline:
                 return None
 
             # 3. Get web search results
+            t0 = time.time()
             web_results = None
             if use_web_search:
                 web_results_list = self._search_bing(query)
                 web_results = "\n\n".join(web_results_list)
+                print(f"[3. Web Search] Retrieved {len(web_results_list)} results in {time.time() - t0:.2f}s")
 
             # 4. Get chat history
+            t0 = time.time()
             history_chain = []
             pairs = [
                 (chat_history[i], chat_history[i + 1])
@@ -155,17 +161,25 @@ class RAGPipeline:
                 history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
 
             history_chain = history_chain[::-1]
+            print(f"[4. Chat History] Processed {len(history_chain)} pairs in {time.time() - t0:.2f}s")
             
             # 5. Reform query for better retrieval/response
-            refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
+            t0 = time.time()
+            # refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
+            print(f"[5. Query Reform] Completed in {time.time() - t0:.2f}s")
+            # print(f"Refined Query: {refined_query}")
 
             # 6. Invokes retrievers to get relevant chunks
-            docs = self.hybrid_retriever.retrieve_context(refined_query, hybrid_retriever, max_results=5) 
+            t0 = time.time()
+            docs = self.hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5) 
+            print(f"[6. Retrieval] Retrieved {len(docs)} chunks in {time.time() - t0:.2f}s")
 
              # 7. Get uploaded chat documents if chat_id provided
+            t0 = time.time()
             chat_documents = []
             if chat_id:
                 chat_documents = self._process_chat_documents(chat_id)
+            print(f"[7. Chat Documents] Processed {len(chat_documents)} documents in {time.time() - t0:.2f}s")
 
             # 8. Combine regular docs with chat documents
             all_docs = docs + chat_documents
@@ -174,6 +188,7 @@ class RAGPipeline:
             retrieved_info = []
             context_list = []
             
+            t0 = time.time()
             for doc in all_docs:
                 if doc.metadata.get("source") == "Uploaded":
                     context_chunks = [doc]
@@ -200,22 +215,26 @@ class RAGPipeline:
 
             context = '\n\n'.join(context_list)
             yield retrieved_info
+            print(f"[7. Context] Processed {len(context_list)} contexts in {time.time() - t0:.2f}s")
     
             # 8. Constructs prompt
+            t0 = time.time()
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}\n\n" if content else ""
  
             history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
-
+            refined_query = None # placeholder
             prompt = config.RESPONSE_PREFIX.format(
                 context=format_block("Context", context),
                 history=format_block("Chat History", "\n".join(history_lines)),
                 web_context=format_block("Web Context", web_results),
-                original_query=format_block("Original Query", query.strip()),
-                refined_query=format_block("Refined Query", refined_query.strip())
+                original_query=format_block("Original Query", query),
+                refined_query=format_block("Refined Query", refined_query)
             )
+            print(f"[8. Prompt] Constructed in {time.time() - t0:.2f}s")
 
             # 9. Prompts LLM with context
+            t0 = time.time()
             streamer = self.engine.prompt(
                 prompt=prompt,
                 temperature=ModelConfig.TEMPERATURE,
@@ -223,7 +242,7 @@ class RAGPipeline:
             )
             for token in streamer:
                 yield token
-
+            print(f"[9. LLM Response] Generated in {time.time() - t0:.2f}s")
             return None
         except Exception as e:
             yield f"\n[Error]: {e}\n"

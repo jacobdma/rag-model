@@ -41,7 +41,7 @@ export default function LoginForm({
 
   return (
     <div className="bg-neutral-200 dark:bg-neutral-900 font-medium w-full h-screen justify-center items-center flex font-sans">
-      <div className="bg-white dark:bg-neutral-800 p-10 rounded-3xl shadow-xl w-sm mx-auto flex flex-col justify-center">
+      <div className="bg-white dark:bg-neutral-800 p-10 rounded-lg shadow-xl w-sm mx-auto flex flex-col justify-center">
         {/* Welcome Header */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex items-center justify-center mb-4">
@@ -80,7 +80,7 @@ export default function LoginForm({
         <div className="mt-6 border-t border-neutral-200 dark:border-neutral-700" />
 
         <button 
-          className="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-3xl mt-8
+          className="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg mt-8
                  transition-colors duration-200" 
           onClick={handleLogin}
         >
@@ -92,7 +92,7 @@ export default function LoginForm({
         <button
           className="w-full bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 
                  dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-100 
-                 p-3 rounded-3xl mt-2 transition-colors duration-200"
+                 p-3 rounded-lg mt-2 transition-colors duration-200"
           onClick={onGuest}
           type="button"
         >

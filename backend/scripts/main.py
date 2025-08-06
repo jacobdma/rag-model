@@ -261,7 +261,7 @@ async def upload_files(
                 continue
             
             file_content = await file.read()
-            reader = FileReader(supported_extensions, set())
+            reader = FileReader(supported_extensions)
             
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as temp_file:
                 temp_file.write(file_content)
