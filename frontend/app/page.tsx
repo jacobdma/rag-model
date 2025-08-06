@@ -9,6 +9,7 @@ import SettingsMenu from "@/components/SettingsMenu"
 import { Sidebar } from "@/components/Sidebar"
 import LoginForm from "@/components/LoginForm"
 import { ContextWindow } from "@/components/ContextWindow"
+import { getBackendUrl } from '@/utils/api';
 
 type ChatSession = {
   id: string
@@ -56,7 +57,7 @@ export default function Chat() {
     
     if (storedToken && storedUsername) {
       // Validate token by trying to fetch chats
-      fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
+      fetch(`${getBackendUrl()}/chats`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       })
       .then(res => {
@@ -151,7 +152,7 @@ export default function Chat() {
         headers['Authorization'] = `Bearer ${token}`;
       }
   
-      const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat`, {
+      const response = await fetch(`${getBackendUrl()}/chat`, {
         method: "POST",
         headers,
         body: JSON.stringify({ 
@@ -324,7 +325,7 @@ export default function Chat() {
     localStorage.setItem("username", user);
     setShowLoginForm(false);
     
-    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
+    fetch(`${getBackendUrl()}/chats`, {
       headers: { Authorization: `Bearer ${tok}` },
     })
     .then(res => res.json())

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef  } from "react"
 import { Settings2, X } from "lucide-react"
 import Dropdown from "@/components/Dropdown"
 import Slider from "@/components/Slider"
-import Toggle from "@/components/Toggle"
+import { getBackendUrl } from '@/utils/api';
 
 interface SettingsMenuProps {
   open: boolean;
@@ -35,7 +35,7 @@ export default function SettingsMenu({
   // ✅ Sync config
   useEffect(() => {
     const config = { temperature, model, tone }
-    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/set-config`, {
+    fetch(`${getBackendUrl()}/set-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),

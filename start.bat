@@ -25,4 +25,4 @@ start "" cmd /k "call env\Scripts\activate && cd /d %~dp0backend && uvicorn scri
 timeout /t 1 >nul
 
 echo Starting Next.js frontend on port %PORT_FRONTEND%...
-start "" cmd /k "cd /d %~dp0frontend && npm run dev -- -p %PORT_FRONTEND%"
+start "" cmd /k "cd /d %~dp0frontend && set NEXT_PUBLIC_BACKEND_PORT=%PORT_BACKEND% && npm run dev -- -p %PORT_FRONTEND%"

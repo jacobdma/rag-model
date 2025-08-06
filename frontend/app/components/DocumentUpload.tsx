@@ -50,7 +50,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
       const headers: Record<string, string> = {};
 
       const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/upload-files/${chatId}`,
+        `${getBackendUrl()}/upload-files/${chatId}`,
         {
           method: 'POST',
           headers,
@@ -120,7 +120,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
   const removeDocument = async (filename: string) => {
     try {
       await fetch(
-        `http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chat-documents/${chatId}/${filename}`,
+        `${getBackendUrl()}/chat-documents/${chatId}/${filename}`,
         { method: 'DELETE' }
       );
       updateDocuments(documents.filter(doc => doc.filename !== filename));
