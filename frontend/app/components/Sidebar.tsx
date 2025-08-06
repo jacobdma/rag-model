@@ -189,13 +189,13 @@ export function Sidebar({
                 </button>
               </div>
             ) : (
-              <>
+              <div className="px-2">
                 <button
                   onClick={() => {
                     onSignIn()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <User size={16} />
                   Sign In
@@ -205,12 +205,12 @@ export function Sidebar({
                     onOpenSettings()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <Settings2 size={16} />
                   Settings
                 </button>
-              </>
+              </div>
             )}
           </div>
         )}
