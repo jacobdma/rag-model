@@ -15,6 +15,9 @@ type SidebarProps = {
   setActiveChatId: (id: string | null) => void
   setChats: React.Dispatch<React.SetStateAction<ChatSession[]>>
   currentChatIsEmpty: boolean
+  loadingChats: Set<string>
+  setLoadingChats: React.Dispatch<React.SetStateAction<Set<string>>>
+  streamController: AbortController | null
 }
 
 export function Sidebar({
@@ -23,6 +26,9 @@ export function Sidebar({
   setActiveChatId,
   setChats,
   currentChatIsEmpty,
+  loadingChats,
+  setLoadingChats,
+  streamController,
   username,
   onSignIn,
   onSignOut,
@@ -51,18 +57,32 @@ export function Sidebar({
   }
   
   async function deleteChat(chatId: string) {
-    const token = localStorage.getItem("access_token");
-    await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats/${chatId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
     setChats((prev) => prev.filter((chat) => chat.id !== chatId));
     if (chatId === activeChatId) {
       const remaining = chats.filter((chat) => chat.id !== chatId);
       setActiveChatId(remaining.length > 0 ? remaining[0].id : null);
+    }
+
+    // If chat is loading, abort it first
+    if (loadingChats.has(chatId) && streamController) {
+      streamController.abort() // Stop generation if chat is loading
+      setLoadingChats(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(chatId)
+        return newSet
+      })
+    }
+
+    try {
+      const token = localStorage.getItem("access_token");
+      await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats/${chatId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
     }
   }
 

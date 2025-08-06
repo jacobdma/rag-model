@@ -47,6 +47,9 @@ export default function Chat() {
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null)
   const [editingContent, setEditingContent] = useState("")
 
+  // Chat loading state
+  const [loadingChats, setLoadingChats] = useState<Set<string>>(new Set())
+
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
     const storedUsername = localStorage.getItem("username")
@@ -134,6 +137,7 @@ export default function Chat() {
     setEditingContent("");
     setIsLoading(true);
     setIsStreaming(true);
+    setLoadingChats(prev => new Set(prev).add(activeChatId!))
 
     const controller = new AbortController();
     setStreamController(controller);
@@ -251,6 +255,11 @@ export default function Chat() {
       setIsLoading(false);
       setIsStreaming(false);
       setStreamController(null);
+      setLoadingChats(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(activeChatId!)
+        return newSet
+      })
     }
   }
 
@@ -345,6 +354,12 @@ export default function Chat() {
     localStorage.removeItem("username");
   }
 
+  useEffect(() => {
+    // Clear context data when switching chats
+    setContextData(null)
+    setContextIsOpen(false)
+  }, [activeChatId])
+
   return showLoginForm
   ? <LoginForm
       onLogin={handleLogin}
@@ -367,6 +382,9 @@ export default function Chat() {
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
         onOpenSettings={() => setSettingsOpen(true)}
+        loadingChats={loadingChats}
+        setLoadingChats={setLoadingChats}
+        streamController={streamController}
       />
 
       <div 
@@ -384,7 +402,7 @@ export default function Chat() {
           
           <MessageList 
             messages={history} 
-            isLoading={isLoading} 
+            isLoading={loadingChats.has(activeChatId!)}
             editingMessageIndex={editingMessageIndex}
             editingContent={editingContent}
             setEditingContent={setEditingContent}
