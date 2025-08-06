@@ -1,5 +1,4 @@
 # Standard library imports
-from collections import defaultdict
 import os
 import threading
 import yaml

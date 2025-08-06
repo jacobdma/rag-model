@@ -112,6 +112,20 @@ export default function Chat() {
     const messageToSend = messageContent || input.trim();
     if (!messageToSend) return;
 
+    let currentActiveChatId = activeChatId;
+    if (!currentActiveChatId) {
+      // Create a new chat immediately if none exists
+      const newChatId = v4();
+      const newChat: ChatSession = {
+        id: newChatId,
+        name: "New Chat",
+        history: [],
+      };
+      setChats(prevChats => [...prevChats, newChat]);
+      setActiveChatId(newChatId);
+      currentActiveChatId = newChatId;
+    }
+
     let editedHistory: Message[];
     let userMessage: Message;
 
@@ -126,7 +140,7 @@ export default function Chat() {
 
     setChats((prevChats) =>
       prevChats.map((chat) =>
-        chat.id === activeChatId
+        chat.id === currentActiveChatId
           ? { ...chat, history: [...editedHistory, userMessage] }
           : chat
       )
@@ -158,7 +172,7 @@ export default function Chat() {
           query: userMessage.content, 
           history: editedHistory, 
           use_web_search: useWebSearch,
-          chat_id: activeChatId
+          chat_id: currentActiveChatId
         }),
         signal: controller.signal,
       })
@@ -177,7 +191,7 @@ export default function Chat() {
       let assistantMessage = ""
       setChats((prevChats) =>
         prevChats.map((chat) =>
-          chat.id === activeChatId
+          chat.id === currentActiveChatId
             ? {
                 ...chat,
                 history: [...chat.history, { role: "assistant", content: "" }],
@@ -207,7 +221,7 @@ export default function Chat() {
         assistantMessage += chunk
         setChats((prevChats) =>
           prevChats.map((chat) =>
-            chat.id === activeChatId
+            chat.id === currentActiveChatId
               ? {
                   ...chat,
                   history: chat.history.map((msg, idx) =>
@@ -224,7 +238,7 @@ export default function Chat() {
       if (err.name === "AbortError") {
         setChats((prevChats) =>
           prevChats.map((chat) =>
-            chat.id === activeChatId
+            chat.id === currentActiveChatId
               ? {
                   ...chat,
                   history: chat.history.map((msg, idx) =>
@@ -239,7 +253,7 @@ export default function Chat() {
       } else {
         setChats((prevChats) =>
           prevChats.map((chat) =>
-            chat.id === activeChatId
+            chat.id === currentActiveChatId
               ? {
                   ...chat,
                   history: [
@@ -257,7 +271,7 @@ export default function Chat() {
       setStreamController(null);
       setLoadingChats(prev => {
         const newSet = new Set(prev)
-        newSet.delete(activeChatId!)
+        newSet.delete(currentActiveChatId!)
         return newSet
       })
     }
