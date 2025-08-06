@@ -156,7 +156,7 @@ export function Sidebar({
         {profileDropdownOpen && (
           <div 
             ref={profileDropdownRef}
-            className="absolute bottom-full mb-2 left-0 bg-white dark:bg-neutral-800 rounded-lg border-neutral-200 dark:border-neutral-700 py-2 min-w-[160px] z-50"
+            className="absolute bottom-full mb-2 left-0 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 py-2 min-w-[160px] z-50"
           >
             {username ? (
               <div className="px-2">

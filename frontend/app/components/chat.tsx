@@ -75,7 +75,7 @@ export function MessageList({
                   <button
                     type="button"
                     onClick={onCancelEdit}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-responsive-base
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl text-responsive-base
                       bg-white dark:bg-neutral-700
                       border border-neutral-300 dark:border-neutral-700
                       text-neutral-700 dark:text-neutral-300 font-semibold
@@ -86,7 +86,7 @@ export function MessageList({
                   <button
                     type="submit"
                     disabled={!editingContent.trim()}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg
+                    className="flex items-center gap-1 px-3 py-2 rounded-xl
                       bg-green-500 hover:bg-green-600 disabled:bg-neutral-400
                       font-semibold text-white text-responsive-base"
                   >
@@ -124,9 +124,8 @@ export function MessageList({
                 <button
                   onClick={() => onEditMessage(index, message.content)}
                   className="absolute right-1 top-2 opacity-100 p-1 rounded-lg
-                    text-neutral-500 hover:text-neutral-700 
-                    dark:text-neutral-400 dark:hover:text-neutral-200
-                    hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    text-neutral-400 hover:text-neutral-700 
+                    dark:text-neutral-400 dark:hover:text-neutral-200"
                   title="Edit message"
                 >
                   <Edit2 size={14}/>
