@@ -1,8 +1,7 @@
-import { MessageCircle, SquarePen, Trash2, User, Settings2, LogOut, Search } from "lucide-react"
+import { MessageCircle, SquarePen, Trash2, User, Settings2, LogOut, Search, X, SearchX } from "lucide-react"
 import type { Message } from "@/components/chat"
 import { v4 } from "uuid"
 import { useState, useRef, useEffect } from "react"
-import { getBackendUrl } from '@/utils/api';
 
 type ChatSession = {
   id: string
@@ -161,16 +160,19 @@ export function Sidebar({
             className="absolute bottom-full mb-2 left-0 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 py-2 min-w-[160px] z-50"
           >
             {username ? (
-              <>
-                <div className="px-4 py-2 text-sm font-medium text-neutral-800 dark:text-neutral-100 border-b border-neutral-200 dark:border-neutral-700">
-                  {username}
+              <div className="px-2">
+                <div className="flex items-center gap-2 p-2 text-neutral-600 dark:text-neutral-400">
+                  <User size={16} />
+                  <div className="text-sm">
+                    {username}
+                  </div>
                 </div>
                 <button
                   onClick={() => {
                     onOpenSettings()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <Settings2 size={16} />
                   Settings
@@ -180,12 +182,12 @@ export function Sidebar({
                     onSignOut()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <LogOut size={16} />
                   Sign Out
                 </button>
-              </>
+              </div>
             ) : (
               <>
                 <button
@@ -234,10 +236,10 @@ export function Sidebar({
                 <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
                 <input
                   type="text"
-                  placeholder="Search chats..."
+                  placeholder="Search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 text-sm bg-neutral-200 dark:bg-neutral-800 rounded-3xl text-neutral-800 dark:text-neutral-100"
+                  className="w-full pl-10 pr-3 py-2 text-sm bg-neutral-200 dark:bg-neutral-800 rounded-3xl text-neutral-800 dark:text-neutral-100 font-medium focus:outline-none"
                 />
               </div>
               <button
@@ -246,18 +248,21 @@ export function Sidebar({
                   setChatModalOpen(false)
                 }}
                 disabled={currentChatIsEmpty}
-                className="flex items-center gap-2 p-3 rounded-3xl hover:bg-neutral-200 dark:hover:bg-neutral-800 text-sm text-neutral-600 dark:text-neutral-400"
+                className="flex items-center gap-2 p-2 rounded-3xl hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400"
                 title="New Chat"
               >
-                <SquarePen size={16} />
+                <SquarePen className="size-5" />
               </button>
             </div>
             
             <div className="flex-1 overflow-y-auto">
               {filteredChats.length === 0 ? (
-                <p className="text-neutral-500 dark:text-neutral-400 text-center py-8">
-                  {searchQuery ? "No chats found" : "No chats yet"}
-                </p>
+                <div className="flex flex-1 flex-col items-center justify-center h-full mt-4">
+                  {searchQuery ? <SearchX className="size-12 mx-auto text-neutral-400" /> : <X className="size-12 mx-auto text-neutral-400" />}
+                  <p className="text-neutral-400 text-center py-4">
+                    {searchQuery ? "No chats found" : "No chats yet"}
+                  </p>
+                </div>
               ) : (
                 <ul className="space-y-2">
                   {filteredChats.map((chat) => (

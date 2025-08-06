@@ -162,7 +162,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
           onDragLeave={handleDragLeave}
           onClick={handleFileSelect}
         >
-          <Upload className="w-8 h-8 mx-auto mb-2 text-neutral-400" />
+          <Upload className="size-12 mx-auto mb-2 text-neutral-400" />
           <p className="text-responsive-sm text-neutral-500 dark:text-neutral-400">
             Drop files here or click to upload
           </p>

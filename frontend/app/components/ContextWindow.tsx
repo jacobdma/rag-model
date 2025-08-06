@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { DocumentUpload } from "@/components/DocumentUpload"
+import { FolderX } from "lucide-react"
 
 function getFileName(path: string) {
   if (!path) return "Unknown Source"
@@ -141,8 +142,11 @@ export function ContextWindow({
                 )
               })
             ) : (
-              <div className="text-neutral-500 dark:text-neutral-400 text-center py-8">
-                No retrieved data
+              <div className="flex flex-1 flex-col items-center justify-center h-full">
+                <FolderX className="size-16 mx-auto text-neutral-400" />
+                <div className="text-neutral-400 text-center py-8">
+                  No retrieved data
+                </div>
               </div>
             )}
           </div>
