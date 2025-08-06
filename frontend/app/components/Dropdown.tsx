@@ -20,9 +20,9 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
   const selected = options.find((o) => o.value === value)
 
   return (
-    <div className="relative">
+    <div className="relative justify-center items-center w-full">
       {label && (
-        <label className="block px-3 pb-2 text-responsive-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <label className="block pb-2 text-responsive-lg font-medium text-neutral-700 dark:text-neutral-300">
           {label}
         </label>
       )}
@@ -30,7 +30,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
         onClick={() => setOpen(!open)}
         className="
           w-full h-9 flex justify-between items-center
-          px-3 rounded-full text-responsive-sm font-medium
+          px-3 rounded-lg text-responsive-base font-medium
           text-neutral-700 dark:text-neutral-300
           bg-neutral-200 dark:bg-neutral-800
           hover:bg-neutral-200 dark:hover:bg-neutral-700
@@ -44,8 +44,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
       {open && (
         <ul className="absolute z-2 mt-2 w-full 
         bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700
-        rounded-2xl shadow-xl
-        text-neutral-700 dark:text-neutral-300">
+        rounded-lg text-neutral-700 dark:text-neutral-300 text-responsive-base">
           {options.map((option) => (
             <li
               key={option.value}
@@ -54,7 +53,7 @@ export default function Dropdown({ options, value, onChange, label }: DropdownPr
                 setOpen(false)
               }}
               className={`
-                px-4 py-2 cursor-pointer rounded-2xl 
+                px-4 py-2 cursor-pointer rounded-lg
                 hover:bg-neutral-200 dark:hover:bg-neutral-800
                 font-medium
               `}

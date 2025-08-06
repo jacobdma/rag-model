@@ -155,7 +155,7 @@ export function ContextWindow({
 
       {fullTextModalIndex !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[6px]">
-          <div className="bg-white dark:bg-neutral-900 rounded-lg max-w-4xl max-h-[80vh] w-full flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-neutral-900 rounded-lg max-w-4xl max-h-[80vh] w-full flex flex-col">
             
             <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
               

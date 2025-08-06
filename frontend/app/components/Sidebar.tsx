@@ -1,4 +1,4 @@
-import { MessageCircle, SquarePen, Trash2, User, Settings2, LogOut, Search, X, SearchX } from "lucide-react"
+import { MessageCircle, Plus, Trash2, User, Settings2, LogOut, Search, X, SearchX } from "lucide-react"
 import type { Message } from "@/components/chat"
 import { v4 } from "uuid"
 import { useState, useRef, useEffect } from "react"
@@ -132,7 +132,7 @@ export function Sidebar({
           className="p-2 rounded-lg bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-neutral-50"
           title="New Chat"
         >
-          <SquarePen size={20} />
+          <Plus size={20} />
         </button>
         
         <button
@@ -146,7 +146,7 @@ export function Sidebar({
 
       <div className="relative pb-4">
         <button
-          className="p-2 rounded-full hover:bg-neutral-200 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+          className="p-2 rounded-lg hover:bg-neutral-300 hover:dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
           onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
           title={username || "Sign In"}
         >
@@ -156,11 +156,11 @@ export function Sidebar({
         {profileDropdownOpen && (
           <div 
             ref={profileDropdownRef}
-            className="absolute bottom-full mb-2 left-0 bg-white dark:bg-neutral-800 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 py-2 min-w-[160px] z-50"
+            className="absolute bottom-full mb-2 left-0 bg-white dark:bg-neutral-800 rounded-lg border-neutral-200 dark:border-neutral-700 py-2 min-w-[160px] z-50"
           >
             {username ? (
               <div className="px-2">
-                <div className="flex items-center gap-2 p-2 text-neutral-600 dark:text-neutral-400">
+                <div className="flex items-center gap-2 p-2 text-neutral-700 dark:text-neutral-300">
                   <User size={16} />
                   <div className="text-sm">
                     {username}
@@ -171,7 +171,7 @@ export function Sidebar({
                     onOpenSettings()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <Settings2 size={16} />
                   Settings
@@ -181,7 +181,7 @@ export function Sidebar({
                     onSignOut()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <LogOut size={16} />
                   Sign Out
@@ -194,7 +194,7 @@ export function Sidebar({
                     onSignIn()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <User size={16} />
                   Sign In
@@ -204,7 +204,7 @@ export function Sidebar({
                     onOpenSettings()
                     setProfileDropdownOpen(false)
                   }}
-                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
+                  className="w-full flex items-center gap-2 p-2 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-lg"
                 >
                   <Settings2 size={16} />
                   Settings
@@ -219,7 +219,7 @@ export function Sidebar({
 
   return (
     <>
-      <div className="fixed inset-y-0 left-0 w-[4vw] bg-neutral-200 dark:bg-neutral-800 z-40 flex flex-col">
+      <div className="fixed inset-y-0 left-0 w-[4vw] bg-neutral-200 dark:bg-neutral-800 z-51 flex flex-col">
         {sidebarContent}
       </div>
 
@@ -228,7 +228,7 @@ export function Sidebar({
           <div className="absolute inset-0 backdrop-blur-[6px]" />
           <div 
             ref={chatModalRef}
-            className="relative bg-white dark:bg-neutral-900 rounded-lg shadow-2xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-6 z-10 max-h-[80vh] flex flex-col"
+            className="relative bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-6 z-10 max-h-[80vh] flex flex-col"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="relative flex-1 mr-3">
@@ -247,10 +247,10 @@ export function Sidebar({
                   setChatModalOpen(false)
                 }}
                 disabled={currentChatIsEmpty}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400"
+                className="flex items-center gap-2 p-2 rounded-lg bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-neutral-50"
                 title="New Chat"
               >
-                <SquarePen className="size-5" />
+                <Plus size={20} />
               </button>
             </div>
             

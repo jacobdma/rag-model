@@ -72,17 +72,9 @@ export default function SettingsMenu({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Blurred overlay */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[6px]" />
-      <div ref={modalRef} className="relative bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-8 z-10">
-        <button
-          className="absolute top-4 right-4 text-neutral-400 hover:text-red-500 text-responsive-xl font-bold rounded-full p-1 focus:outline-none"
-          onClick={onClose}
-          title="Close"
-        >
-          <X />
-        </button>
-        
-        <h2 className="text-lg font-semibold text-neutral-800 dark:text-neutral-100 mb-6">
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[6px]" />
+      <div ref={modalRef} className="relative bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-8 pt-6 z-10">
+        <h2 className="text-responsive-2xl font-semibold text-neutral-800 dark:text-neutral-100 mb-6 ">
           Settings
         </h2>
         
