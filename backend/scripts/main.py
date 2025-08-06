@@ -150,12 +150,6 @@ async def stream_query(
         )
         first_yield = next(generator)
         if isinstance(first_yield, list):
-            print("SURROUNDING CHUNKS")
-            for chunk in first_yield:
-                for c in chunk["surrounding_chunks"]:
-                    print(f"{c}\n")
-                print("\n\n")
-            print("SURROUNDING CHUNKS DONE")
             # Send the full group structure, not a flattened list
             context_str = f"[CONTEXT START]{json.dumps(first_yield)}[CONTEXT END]"
             yield context_str
@@ -163,32 +157,56 @@ async def stream_query(
             yield first_yield
         for chunk in generator:
             if await request.is_disconnected():
-                print("Client disconnected, stopping generation.")
                 break
             assistant_reply += str(chunk)
             yield chunk
 
         # Only save if not interrupted
         if not await request.is_disconnected():
-            chats_collection.update_one(
-                {"_id": chat_id},
-                {
-                    "$setOnInsert": {
-                        "_id": chat_id,
-                        "username": username,
-                        "timestamp": time.time(),
-                    },
-                    "$push": {
-                        "history": {
-                            "$each": [
+            existing_chat = chats_collection.find_one({"_id": chat_id})
+            print("Saving chat history...")
+            if existing_chat is not None and len(input.history) < len(existing_chat.get("history", [])):
+                print("Editing...")
+                chats_collection.update_one(
+                    {"_id": chat_id},
+                    {
+                        "$set": {
+                            "history": [msg.dict() if hasattr(msg, 'dict') else {'role': msg.role, 'content': msg.content} for msg in input.history] + [
                                 {"role": "user", "content": input.query},
                                 {"role": "assistant", "content": assistant_reply}
                             ]
                         }
                     }
-                },
-                upsert=True
-            )
+                )
+            else:
+                print("DEBUGS +++++++++++++++++++++++++++++++")
+                print(f"Looking for chat_id: {chat_id}, type: {type(chat_id)}")
+                print(existing_chat)
+                print(len(input.history))
+                print("Not editing...")
+                print("DEBUG END +++++++++++++++++++++++++++++++")
+
+                chats_collection.update_one(
+                    {"_id": chat_id},
+                    {
+                        "$setOnInsert": {
+                            "_id": chat_id,
+                            "username": username,
+                            "timestamp": time.time(),
+                        },
+                        "$push": {
+                            "history": {
+                                "$each": [
+                                    {"role": "user", "content": input.query},
+                                    {"role": "assistant", "content": assistant_reply}
+                                ]
+                            }
+                        }
+                    },
+                    upsert=True
+                )
+        else:
+            print("Request disconnected, not saving chat history.")
 
     async def string_generator():
         async for item in token_generator():

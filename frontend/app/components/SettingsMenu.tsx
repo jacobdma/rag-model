@@ -6,15 +6,11 @@ import Slider from "@/components/Slider"
 import Toggle from "@/components/Toggle"
 
 interface SettingsMenuProps {
-  useDoubleRetrievers: boolean;
-  setUseDoubleRetrievers: (value: boolean) => void;
   open: boolean;
   onClose: () => void;
 }
 
 export default function SettingsMenu({
-  useDoubleRetrievers,
-  setUseDoubleRetrievers,
   open,
   onClose,
 }: SettingsMenuProps) {
@@ -117,13 +113,6 @@ export default function SettingsMenu({
             step={0.08871}
             onChange={setTemperature}
             displayValue={getTemperatureLabel(temperature)}
-          />
-          
-          {/* Example Toggle usage */}
-          <Toggle
-            checked={useDoubleRetrievers}
-            onChange={setUseDoubleRetrievers}
-            label="Double Retrievers"
           />
         </div>
       </div>

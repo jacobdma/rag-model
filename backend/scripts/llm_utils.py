@@ -1,11 +1,11 @@
-import torch
+import threading
 import time
+import torch
 from . import config
 from .config import ModelConfig
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation.streamers import TextIteratorStreamer
-import threading
 
 _LLM_ENGINE_INSTANCE = None
 
@@ -26,7 +26,7 @@ class LLMEngine:
         Loads and caches model and tokenizer
         """
         if self._model is None or self._tokenizer is None:
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name, token=self.token)
+            self._tokenizer = AutoTokenizer.from_pretrained(model_name, token=self.token, padding_side="left")
             print(f">>> Loading model {model_name}")
             start = time.time()
 
@@ -34,7 +34,7 @@ class LLMEngine:
                 model_name,
                 token=self.token,
                 low_cpu_mem_usage=True,
-                device_map="cuda" if torch.cuda.is_available() else "cpu",
+                device_map="auto",
                 torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
             )
             print(f">>> Model loaded in {(time.time() - start):.2f}s")

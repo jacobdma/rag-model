@@ -11,21 +11,17 @@ type ChatSession = {
 
 type SidebarProps = {
   chats: { id: string; name: string; history: Message[] }[]
-  sidebarOpen: boolean
   activeChatId: string | null
   setActiveChatId: (id: string | null) => void
   setChats: React.Dispatch<React.SetStateAction<ChatSession[]>>
-  setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>
   currentChatIsEmpty: boolean
 }
 
 export function Sidebar({
   chats,
-  sidebarOpen,
   activeChatId,
   setActiveChatId,
   setChats,
-  setSidebarOpen,
   currentChatIsEmpty,
   username,
   onSignIn,

@@ -2,43 +2,138 @@
 
 import type React from "react"
 import { useRef, useEffect } from "react"
-import { Search, ArrowUp, Square } from "lucide-react"
+import { Search, ArrowUp, Square, Edit2, Check, X } from "lucide-react"
 
 export interface Message {
   role: "user" | "assistant"
   content: string
 }
 
-export function MessageList({ messages, isLoading }: { messages: Message[]; isLoading: boolean }) {
+interface MessageListProps {
+  messages: Message[]
+  isLoading: boolean
+  editingMessageIndex: number | null
+  editingContent: string
+  setEditingContent: (content: string) => void
+  onEditMessage: (index: number, content: string) => void
+  onSaveEdit: (e: React.FormEvent) => void
+  onCancelEdit: () => void
+  isStreaming: boolean
+}
+
+export function MessageList({ 
+  messages, 
+  isLoading,
+  editingMessageIndex,
+  editingContent,
+  setEditingContent,
+  onEditMessage,
+  onSaveEdit,
+  onCancelEdit,
+  isStreaming
+ }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  useEffect(() => {
+    if (editTextareaRef.current) {
+      editTextareaRef.current.style.height = "auto"
+      editTextareaRef.current.style.height = editTextareaRef.current.scrollHeight + "px"
+    }
+  }, [editingContent])
+
+  useEffect(() => {
+    if (editingMessageIndex !== null && editTextareaRef.current) {
+      editTextareaRef.current.focus()
+      const length = editTextareaRef.current.value.length
+      editTextareaRef.current.setSelectionRange(length, length)
+    }
+  }, [editingMessageIndex])
+
   return (
     <div className={`flex-col overflow-y-auto mb-4 w-full max-w-xl mx-auto ${messages.length === 0 ? "" : "flex-1"}`}>
       {messages.map((message, index) => (
-        <div key={index} className={`mb-4 ${message.role === "user" ? "text-right" : "text-left"}`}>
-          <div className={`inline-block px-4 py-2 text-responsive-base rounded-3xl break-words whitespace-pre-wrap text-left${
-            message.role === "user" 
-            ? `
-              bg-neutral-200                  
-              dark:bg-neutral-800
-              text-neutral-700 
-              dark:text-neutral-300
-              font-medium
-              max-w-[80%]
-              `
-            : `
-              text-neutral-700
-              dark:text-neutral-300
-              font-medium
-              max-w-[100%]
-              `
-            }`}>
-            {message.content}
-          </div>
+        <div key={index} className={`mb-4 group ${message.role === "user" ? "text-right" : "text-left"}`}>
+          {editingMessageIndex === index ? (
+            // Editing mode
+            <div className="w-full rounded-3xl p-3
+                    bg-neutral-200 dark:bg-neutral-800
+                    text-neutral-700 dark:text-neutral-300
+                    font-medium text-responsive-base">
+              <form onSubmit={onSaveEdit} className="w-full">
+                <textarea
+                  ref={editTextareaRef}
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                  className={"w-full resize-none overflow-hidden focus:outline-none"}
+                />
+                <div className="flex gap-2 mt-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={onCancelEdit}
+                    className="flex items-center gap-1 px-3 py-2 rounded-3xl text-responsive-base
+                      bg-white dark:bg-neutral-700
+                      border border-neutral-300 dark:border-neutral-700
+                      text-neutral-700 dark:text-neutral-300 font-semibold
+                      hover:bg-neutral-100 dark:hover:bg-neutral-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!editingContent.trim()}
+                    className="flex items-center gap-1 px-3 py-2 rounded-3xl
+                      bg-green-500 hover:bg-green-600 disabled:bg-neutral-400
+                      font-semibold text-white text-responsive-base"
+                  >
+                    Send
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            // Normal message display
+            <div className="relative">
+              <div className={`inline-block px-2 py-2 text-responsive-base rounded-3xl break-words whitespace-pre-wrap text-left${
+                message.role === "user" 
+                ? `
+                  bg-neutral-200                  
+                  dark:bg-neutral-800
+                  text-neutral-700 
+                  dark:text-neutral-300
+                  font-medium
+                  max-w-[80%]
+                  mr-8
+                  `
+                : `
+                  text-neutral-700
+                  dark:text-neutral-300
+                  font-medium
+                  max-w-[100%]
+                  `
+                }`}>
+                {message.content}
+              </div>
+              
+              {/* Edit button - only show for user messages and when not currently streaming */}
+              {message.role === "user" && !isStreaming && !isLoading && (
+                <button
+                  onClick={() => onEditMessage(index, message.content)}
+                  className="absolute right-1 top-2 opacity-100 p-1 rounded-3xl
+                    text-neutral-500 hover:text-neutral-700 
+                    dark:text-neutral-400 dark:hover:text-neutral-200
+                    hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  title="Edit message"
+                >
+                  <Edit2 size={14} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       ))}
       {isLoading && (
@@ -59,13 +154,14 @@ export function MessageList({ messages, isLoading }: { messages: Message[]; isLo
 
 export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebSearch, onSubmit, isStreaming, onStop }: any) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  
   useEffect(() => {
-            const textarea = textareaRef.current
-            if (textarea) {
-              textarea.style.height = "auto"
-              textarea.style.height = textarea.scrollHeight + "px"
-            }
-          }, [input])
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = "auto"
+      textarea.style.height = textarea.scrollHeight + "px"
+    }
+  }, [input])
           
   return (
     <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto">

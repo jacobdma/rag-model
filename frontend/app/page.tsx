@@ -17,21 +17,35 @@ type ChatSession = {
 }
 
 export default function Chat() {
+
+  // Chat states
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [useWebSearch, setUseWebSearch] = useState(false)
   const [chats, setChats] = useState<ChatSession[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [useDoubleRetrievers, setUseDoubleRetrievers] = useState(true)
+
+  // Configuration states
+  const [useWebSearch, setUseWebSearch] = useState(false)
+
+  // Authentication state
   const [token, setToken] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [showLoginForm, setShowLoginForm] = useState(false);
+
+  // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamController, setStreamController] = useState<AbortController | null>(null);
-  const [contextData, setContextData] = useState<any>(null);
+
+  // Settings menu state
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Context window state
+  const [contextData, setContextData] = useState<any>(null);
   const [contextIsOpen, setContextIsOpen] = useState(false);
+
+  // Editing state
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null)
+  const [editingContent, setEditingContent] = useState("")
 
   useEffect(() => {
     const storedToken = localStorage.getItem("access_token")
@@ -89,39 +103,41 @@ export default function Chat() {
     return `${title}`;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, messageContent?: string, fromIndex?: number) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    const userMessage: Message = { role: "user", content: input };
+    
+    const messageToSend = messageContent || input.trim();
+    if (!messageToSend) return;
+
+    let editedHistory: Message[];
+    let userMessage: Message;
+
+    if (fromIndex !== undefined) {
+      editedHistory = history.slice(0, fromIndex);
+      userMessage = { role: "user", content: messageToSend };
+    } else {
+      // Normal new message
+      editedHistory = history;
+      userMessage = { role: "user", content: messageToSend };
+    }
 
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === activeChatId
-          ? { ...chat, history: [...chat.history, userMessage] }
+          ? { ...chat, history: [...editedHistory, userMessage] }
           : chat
       )
     );
 
     setInput("");
+    setEditingMessageIndex(null);
+    setEditingContent("");
     setIsLoading(true);
     setIsStreaming(true);
 
     const controller = new AbortController();
     setStreamController(controller);
 
-    // Debug log
-    const requestBody = {
-      query: userMessage.content,
-      history: history.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      use_web_search: useWebSearch,
-      use_double_retrievers: useDoubleRetrievers,
-      chat_id: activeChatId
-    };
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
-      
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
@@ -136,9 +152,8 @@ export default function Chat() {
         headers,
         body: JSON.stringify({ 
           query: userMessage.content, 
-          history: history, 
+          history: editedHistory, 
           use_web_search: useWebSearch,
-          use_double_retrievers: useDoubleRetrievers, 
           chat_id: activeChatId
         }),
         signal: controller.signal,
@@ -177,10 +192,8 @@ export default function Chat() {
           const start = chunk.indexOf("[CONTEXT START]");
           const end = chunk.indexOf("[CONTEXT END]");
           const jsonStr = chunk.substring(start + 15, end);
-          console.log("EXTRACTED JSON STRING:", jsonStr);
           try {
             const parsed = JSON.parse(jsonStr);
-            console.log("PARSED CONTEXT DATA:", parsed);
             setContextData(parsed);
           } catch (err) {
             console.warn("Failed to parse context data:", err);
@@ -240,6 +253,21 @@ export default function Chat() {
       setStreamController(null);
     }
   }
+
+  const handleEditMessage = (index: number, content: string) => {
+    setEditingMessageIndex(index);
+    setEditingContent(content);
+  }
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    if (editingMessageIndex === null || !editingContent.trim()) return;
+    handleSubmit(e, editingContent, editingMessageIndex);
+  }
+
+  const handleCancelEdit = () => {
+    setEditingMessageIndex(null);
+    setEditingContent("");
+  } 
   
   const isEmpty = history.length === 0
   
@@ -283,8 +311,8 @@ export default function Chat() {
    function handleLogin(tok: string, user: string) {
     setToken(tok);
     setUsername(user);
-    localStorage.setItem("access_token", tok);  // Add this
-    localStorage.setItem("username", user);     // Add this
+    localStorage.setItem("access_token", tok);
+    localStorage.setItem("username", user);
     setShowLoginForm(false);
     
     fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:8000/chats`, {
@@ -324,20 +352,16 @@ export default function Chat() {
     />
   : (
     <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
-      <SettingsMenu        
-        useDoubleRetrievers={useDoubleRetrievers}
-        setUseDoubleRetrievers={setUseDoubleRetrievers}
+      <SettingsMenu
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
 
       <Sidebar
         chats={chats}
-        sidebarOpen={sidebarOpen}
         activeChatId={activeChatId}
         setActiveChatId={setActiveChatId}
         setChats={setChats}
-        setSidebarOpen={setSidebarOpen}
         currentChatIsEmpty={currentChatIsEmpty}
         username={username}
         onSignIn={handleSignIn}
@@ -358,8 +382,18 @@ export default function Chat() {
             </div>
           )}
           
-          <MessageList messages={history} isLoading={isLoading} />
-          
+          <MessageList 
+            messages={history} 
+            isLoading={isLoading} 
+            editingMessageIndex={editingMessageIndex}
+            editingContent={editingContent}
+            setEditingContent={setEditingContent}
+            onEditMessage={handleEditMessage}
+            onSaveEdit={handleSaveEdit}
+            onCancelEdit={handleCancelEdit}
+            isStreaming={isStreaming}
+          />
+
           <ChatInput
             input={input}
             setInput={setInput}
