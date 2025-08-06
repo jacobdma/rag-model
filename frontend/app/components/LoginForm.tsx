@@ -17,7 +17,7 @@ export default function LoginForm({
   const handleLogin = async () => {
     setError("");
     try {
-      const res = await fetch(`${getBackendUrl()}/login`, {
+      const res = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

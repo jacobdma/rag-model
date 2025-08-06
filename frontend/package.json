@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "cross-env NEXT_PUBLIC_BACKEND_PORT=%NEXT_PUBLIC_BACKEND_PORT% next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -11,7 +11,7 @@
   "dependencies": {
     "lucide-react": "^0.508.0",
     "next": "^15.3.2",
-    "react": "^19.0.0",
+    "react": "^19.0.0", 
     "react-dom": "^19.0.0",
     "uuidv4": "^6.2.13"
   },

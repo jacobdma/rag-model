@@ -76,7 +76,7 @@ export function Sidebar({
 
     try {
       const token = localStorage.getItem("access_token");
-      await fetch(`${getBackendUrl()}/chats/${chatId}`, {
+      await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chats/${chatId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

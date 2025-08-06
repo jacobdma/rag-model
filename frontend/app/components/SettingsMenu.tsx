@@ -35,7 +35,7 @@ export default function SettingsMenu({
   // ✅ Sync config
   useEffect(() => {
     const config = { temperature, model, tone }
-    fetch(`${getBackendUrl()}/set-config`, {
+    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/set-config`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
