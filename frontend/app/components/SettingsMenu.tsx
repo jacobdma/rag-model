@@ -73,7 +73,7 @@ export default function SettingsMenu({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Blurred overlay */}
       <div className="absolute inset-0 bg-black/20 backdrop-blur-[6px]" />
-      <div ref={modalRef} className="relative bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-8 pt-6 z-10">
+      <div ref={modalRef} className="relative bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 w-full max-w-md mx-auto p-8 pt-6 z-10">
         <h2 className="text-responsive-2xl font-semibold text-neutral-800 dark:text-neutral-100 mb-6 ">
           Settings
         </h2>

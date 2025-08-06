@@ -169,7 +169,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
       border border-neutral-300 
       dark:border-neutral-700 
       p-2
-      rounded-lg
+      rounded-xl
       mt-4
       text-responsive-lg
       ">
@@ -200,7 +200,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
           <button
             type="button"
             onClick={() => setUseWebSearch(!useWebSearch)}
-            className={`flex items-center gap-1 px-3 py-2 rounded-lg ${
+            className={`flex items-center gap-1 px-3 py-2 rounded-xl ${
               useWebSearch
                 ? `
                   bg-blue-50
@@ -227,7 +227,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
             <button
               type="button"
               onClick={onStop}
-              className="p-2 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
+              className="p-2 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 flex items-center justify-center"
             >
               <span className="text-responsive-base font-semibold">Stop</span>
             </button>
@@ -235,7 +235,7 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
+              className="px-3 py-2 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 flex items-center justify-center"
             >
               <span className="text-responsive-base font-semibold">Send</span>
             </button>
