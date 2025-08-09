@@ -10,6 +10,8 @@
   --font-xl: clamp(1rem, 0.8vw, 1.125rem);
   --font-2xl: clamp(1.125rem, 0.9vw, 1.25rem);
   --font-3xl: clamp(1.5rem, 1.1vw, 1.75rem);
+  --font-4xl: clamp(1.75rem, 1.3vw, 2rem);
+  --font-5xl: clamp(2rem, 1.5vw, 2.25rem);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +34,8 @@ body {
 .text-responsive-xl { font-size: var(--font-xl); }
 .text-responsive-2xl { font-size: var(--font-2xl); }
 .text-responsive-3xl { font-size: var(--font-3xl); }
+.text-responsive-4xl { font-size: var(--font-4xl); }
+.text-responsive-5xl { font-size: var(--font-5xl); }
 
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;

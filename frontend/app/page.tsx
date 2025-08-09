@@ -10,6 +10,21 @@ import { Sidebar } from "@/components/Sidebar"
 import LoginForm from "@/components/LoginForm"
 import { ContextWindow } from "@/components/ContextWindow"
 
+const WELCOME_MESSAGES = [
+  "What can I help you find today?",
+  "What are we working on today?",
+  "Hi, let's get started.",
+  "How can I assist you today?",
+  "Ready when you are!",
+  "What's on your mind?",
+  "Let's explore together.",
+] as const;
+
+function getRandomGreeting(): string {
+  const randomIndex = Math.floor(Math.random() * WELCOME_MESSAGES.length);
+  return WELCOME_MESSAGES[randomIndex];
+}
+
 type ChatSession = {
   id: string
   name: string
@@ -408,8 +423,8 @@ export default function Chat() {
         <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
           {isEmpty && (
             <div className="text-center">
-              <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-3xl">
-                What can I help you find today?
+              <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-5xl">
+                {getRandomGreeting()}
               </p>
             </div>
           )}
