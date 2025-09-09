@@ -38,6 +38,7 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false)
   const [chats, setChats] = useState<ChatSession[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
+  const [randomGreeting, setRandomGreeting] = useState<string>(() => getRandomGreeting())
 
   // Configuration states
   const [useWebSearch, setUseWebSearch] = useState(false)
@@ -131,6 +132,7 @@ export default function Chat() {
     if (!currentActiveChatId) {
       // Create a new chat immediately if none exists
       const newChatId = v4();
+      const randomGreeting = getRandomGreeting();
       const newChat: ChatSession = {
         id: newChatId,
         name: "New Chat",
@@ -139,6 +141,7 @@ export default function Chat() {
       setChats(prevChats => [...prevChats, newChat]);
       setActiveChatId(newChatId);
       currentActiveChatId = newChatId;
+      setRandomGreeting(randomGreeting);
     }
 
     let editedHistory: Message[];
@@ -319,6 +322,7 @@ export default function Chat() {
       };
       setChats([defaultChat]);
       setActiveChatId(newChatId);
+
     }
   }, [activeChatId, chats.length]);
 
@@ -418,13 +422,13 @@ export default function Chat() {
 
       <div 
         className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-2" 
-        style={{ marginRight: '25vw', marginLeft: "4vw"}}
+        style={{ marginRight: '25vw', marginLeft: "3vw"}}
       >
         <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
           {isEmpty && (
             <div className="text-center">
               <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-5xl">
-                {getRandomGreeting()}
+                {randomGreeting}
               </p>
             </div>
           )}

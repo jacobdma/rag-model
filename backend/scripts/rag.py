@@ -70,7 +70,6 @@ class RAGPipeline:
 
         left = index - 1
         right = index + 1
-
         while total_chars < target_chars and (left >= 0 or right < len(chunk_list)):
             if left >= 0:
                 chunk = chunk_list[left]

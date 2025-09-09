@@ -1,4 +1,4 @@
-import { MessageCircle, Plus, Trash2, User, Settings2, LogOut, Search, X, SearchX } from "lucide-react"
+import { MessageCircle, SquarePen, Trash2, User, Settings2, LogOut, Search, X, SearchX } from "lucide-react"
 import type { Message } from "@/components/chat"
 import { v4 } from "uuid"
 import { useState, useRef, useEffect } from "react"
@@ -129,28 +129,28 @@ export function Sidebar({
       <div className="flex flex-col items-center gap-4 py-4">
         <button
           onClick={createNewChat}
-          className="p-2 rounded-lg bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-neutral-50"
+          className="p-1 rounded-lg hover:bg-green-500 dark:hover:bg-green-400 text-neutral-800 dark:text-neutral-200 hover:text-neutral-50"
           title="New Chat"
         >
-          <Plus size={20} />
+          <SquarePen size={18} />
         </button>
         
         <button
           onClick={() => setChatModalOpen(true)}
-          className="p-2 rounded-lg bg-neutral-50 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-600"
+          className="p-1 rounded-lg hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200"
           title="Chat History"
         >
-          <MessageCircle size={20} />
+          <MessageCircle size={18} />
         </button>
       </div>
 
       <div className="relative pb-4">
         <button
-          className="p-2 rounded-lg hover:bg-neutral-300 hover:dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+          className="p-1 rounded-lg hover:bg-neutral-300 hover:dark:bg-neutral-700 text-neutral-800 dark:text-neutral-200"
           onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
           title={username || "Sign In"}
         >
-          <User size={20} />
+          <User size={18} />
         </button>
 
         {profileDropdownOpen && (
@@ -219,7 +219,7 @@ export function Sidebar({
 
   return (
     <>
-      <div className="fixed inset-y-0 left-0 w-[4vw] bg-neutral-200 dark:bg-neutral-800 z-51 flex flex-col">
+      <div className="fixed inset-y-0 left-0 w-[3vw] bg-neutral-200 dark:bg-neutral-800 z-51 flex flex-col">
         {sidebarContent}
       </div>
 
@@ -247,10 +247,10 @@ export function Sidebar({
                   setChatModalOpen(false)
                 }}
                 disabled={currentChatIsEmpty}
-                className="flex items-center gap-2 p-2 rounded-lg bg-green-500 hover:bg-green-600 dark:hover:bg-green-400 text-neutral-50"
+                className="flex items-center gap-2 p-1 rounded-lg hover:bg-green-500 text-neutral-50"
                 title="New Chat"
               >
-                <Plus size={20} />
+                <SquarePen size={20} />
               </button>
             </div>
             
