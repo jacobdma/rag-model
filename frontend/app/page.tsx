@@ -38,7 +38,7 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false)
   const [chats, setChats] = useState<ChatSession[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
-  const [randomGreeting, setRandomGreeting] = useState<string>(() => getRandomGreeting())
+  const [randomGreeting, setRandomGreeting] = useState<string | null>(null)
 
   // Configuration states
   const [useWebSearch, setUseWebSearch] = useState(false)
@@ -132,7 +132,7 @@ export default function Chat() {
     if (!currentActiveChatId) {
       // Create a new chat immediately if none exists
       const newChatId = v4();
-      const randomGreeting = getRandomGreeting();
+      const newRandomGreeting = getRandomGreeting();
       const newChat: ChatSession = {
         id: newChatId,
         name: "New Chat",
@@ -141,7 +141,7 @@ export default function Chat() {
       setChats(prevChats => [...prevChats, newChat]);
       setActiveChatId(newChatId);
       currentActiveChatId = newChatId;
-      setRandomGreeting(randomGreeting);
+      setRandomGreeting(newRandomGreeting);
     }
 
     let editedHistory: Message[];
@@ -322,6 +322,7 @@ export default function Chat() {
       };
       setChats([defaultChat]);
       setActiveChatId(newChatId);
+      setRandomGreeting(getRandomGreeting());
 
     }
   }, [activeChatId, chats.length]);
