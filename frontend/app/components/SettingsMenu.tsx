@@ -7,6 +7,8 @@ import Slider from "@/components/Slider"
 interface SettingsMenuProps {
   open: boolean;
   onClose: () => void;
+  theme: "light" | "dark";
+  setTheme: (t: "light" | "dark") => void;
 }
 
 type TabKey = "general" | "personalization"
@@ -14,6 +16,8 @@ type TabKey = "general" | "personalization"
 export default function SettingsMenu({
   open,
   onClose,
+  theme,
+  setTheme,
 }: SettingsMenuProps) {
   const [temperature, setTemperature] = useState(0.00645)
   const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
@@ -52,28 +56,14 @@ export default function SettingsMenu({
     { label: "Mistral", value: "mistralai/Mistral-7B-Instruct-v0.1"},
   ]
 
-  const [theme, setTheme] = useState<"light" | "dark">("light")
   const [nickname, setNickname] = useState<string>("")
 
   useEffect(() => {
-    const storedTheme = (localStorage.getItem("theme") as "light" | "dark") || null
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-    const initialTheme = storedTheme ?? (prefersDark ? "dark" : "light")
-    setTheme(initialTheme)
-
     const storedName = localStorage.getItem("nickname") || ""
     setNickname(storedName) 
   }, [])
 
-  useEffect(() => {
-    const root = document.documentElement
-    if (theme === "dark") {
-      root.classList.add("dark")
-    } else {
-      root.classList.remove("dark")
-    }
-    localStorage.setItem("theme", theme)
-  }, [theme])
+  // Theme is now controlled by parent and applied at the page level
 
   useEffect(() => {
     localStorage.setItem("nickname", nickname)
@@ -111,7 +101,7 @@ export default function SettingsMenu({
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left mb-1 transition
                 ${activeTab === "general" 
                   ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" 
-                  : "text-neutral-700dark:text-neutral-300 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 }`}
             >
               <Settings2 size={10} />
@@ -122,7 +112,7 @@ export default function SettingsMenu({
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left mb-1 transition
                 ${activeTab === "personalization" 
                   ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" 
-                  : "text-neutral-700dark:text-neutral-300 hover:bg-neutral-100/70 dark:hover:bg-neutral-800/70"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700"
                 }`}
             >
               <Palette size={10} />
@@ -167,22 +157,30 @@ export default function SettingsMenu({
                   <label className="block text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-2">
                     Theme
                   </label>
-                  <div className="inline-flex rounded-xl border">
-                    <button className={`px-4 py-2 text-sm transition ${
-                      theme === "light"
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                        : "bg-transparent text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    }`}
-                      onClick={() => setTheme("light")}
+                  <div className="relative inline-flex items-center rounded-xl border border-neutral-200 dark:border-neutral-700 p-1">
+                    {/* Sliding neutral highlight */}
+                    <div
+                      className={`absolute top-1/2 -translate-y-1/2 left-1 h-[calc(100%-8px)] w-1/2 rounded-lg transition-transform duration-200 ease-out
+                        bg-neutral-200 dark:bg-neutral-700
+                        ${theme === 'dark' ? 'translate-x-[calc(100%-8px)]' : 'translate-x-0'}`}
+                    />
+                    <button
+                      className={`relative z-10 px-4 py-2 text-sm font-medium w-24 text-center rounded-lg transition-colors
+                        ${theme === 'light'
+                          ? 'text-neutral-900 dark:text-neutral-100'
+                          : 'text-neutral-600 dark:text-neutral-300'}
+                      `}
+                      onClick={() => setTheme('light')}
                     >
                       Light
                     </button>
-                    <button className={`px-4 py-2 text-sm transition ${
-                      theme === "dark"
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                        : "bg-transparent text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    }`}
-                      onClick={() => setTheme("dark")}
+                    <button
+                      className={`relative z-10 px-4 py-2 text-sm font-medium w-24 text-center rounded-lg transition-colors
+                        ${theme === 'dark'
+                          ? 'text-neutral-900 dark:text-neutral-100'
+                          : 'text-neutral-600 dark:text-neutral-300'}
+                      `}
+                      onClick={() => setTheme('dark')}
                     >
                       Dark
                     </button>
@@ -190,7 +188,7 @@ export default function SettingsMenu({
                 </div>
                 <div>
                   <label htmlFor="nickname"
-                    className="block text-sm font-medium text-neutral-800 darl:text-neutral-200 mb-2"
+                    className="block text-sm font-medium text-neutral-800 dark:text-neutral-200 mb-2"
                   >
                     Nickname
                   </label>
@@ -199,7 +197,7 @@ export default function SettingsMenu({
                     type="text"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
-                    className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral900 text-neutral-900 dark:text-neutral-100 px-4 py-2 outline-none focus:ring-none"
+                    className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-4 py-2 outline-none focus:ring-none"
                   />
                 </div>
               </div>

@@ -54,6 +54,7 @@ export default function Chat() {
 
   // Settings menu state
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   // Context window state
   const [contextData, setContextData] = useState<any>(null);
@@ -67,6 +68,12 @@ export default function Chat() {
   const [loadingChats, setLoadingChats] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    // Initialize theme
+    const storedTheme = (localStorage.getItem("theme") as "light" | "dark") || null
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+    const initialTheme = storedTheme ?? (prefersDark ? "dark" : "light")
+    setTheme(initialTheme)
+
     const storedToken = localStorage.getItem("access_token")
     const storedUsername = localStorage.getItem("username")
     
@@ -108,6 +115,10 @@ export default function Chat() {
       setShowLoginForm(true)
     }
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem("theme", theme)
+  }, [theme])
 
 
   const activeChat = chats.find((c) => c.id === activeChatId)
@@ -400,85 +411,90 @@ export default function Chat() {
       onGuest={handleGuest}
     />
   : (
-    <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
-      <SettingsMenu
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
+    <html className={theme === "dark" ? "dark" : ""}>
+      <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
+        <SettingsMenu
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          theme={theme}
+          setTheme={setTheme}
+        />
 
-      <Sidebar
-        chats={chats}
-        activeChatId={activeChatId}
-        setActiveChatId={setActiveChatId}
-        setChats={setChats}
-        currentChatIsEmpty={currentChatIsEmpty}
-        username={username}
-        onSignIn={handleSignIn}
-        onSignOut={handleSignOut}
-        onOpenSettings={() => setSettingsOpen(true)}
-        loadingChats={loadingChats}
-        setLoadingChats={setLoadingChats}
-        streamController={streamController}
-      />
+        <Sidebar
+          chats={chats}
+          activeChatId={activeChatId}
+          setActiveChatId={setActiveChatId}
+          setChats={setChats}
+          currentChatIsEmpty={currentChatIsEmpty}
+          username={username}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
+          onOpenSettings={() => setSettingsOpen(true)}
+          loadingChats={loadingChats}
+          setLoadingChats={setLoadingChats}
+          streamController={streamController}
+        />
 
-      <div 
-        className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-2" 
-        style={{ marginRight: '25vw', marginLeft: "3vw"}}
-      >
-        <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
+        <div 
+          className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-2" 
+          style={{ marginRight: '25vw', marginLeft: "3vw"}}
+        >
+          <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
+            {isEmpty && (
+              <div className="text-center">
+                <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-5xl">
+                  {randomGreeting}
+                </p>
+              </div>
+            )}
+            
+            <MessageList 
+              messages={history} 
+              isLoading={loadingChats.has(activeChatId!)}
+              editingMessageIndex={editingMessageIndex}
+              editingContent={editingContent}
+              setEditingContent={setEditingContent}
+              onEditMessage={handleEditMessage}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
+              isStreaming={isStreaming}
+            />
+
+            <ChatInput
+              input={input}
+              setInput={setInput}
+              isLoading={isLoading}
+              useWebSearch={useWebSearch}
+              setUseWebSearch={setUseWebSearch}
+              onSubmit={handleSubmit}
+              isStreaming={isStreaming}
+              onStop={() => {
+                if (streamController) {
+                  streamController.abort();
+                }
+              }}
+            />
+          </div>
+
           {isEmpty && (
-            <div className="text-center">
-              <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-5xl">
-                {randomGreeting}
-              </p>
-            </div>
+            <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto text-responsive-sm">
+              <strong className="text-neutral-700 dark:text-neutral-300">Disclaimer:</strong> This system uses AI-generated content. The information provided may be incomplete, outdated, or incorrect.{" "}
+              <strong className="text-neutral-700 dark:text-neutral-300">
+                Do not rely on this tool as a sole source for decision-making. Always verify with official documentation and authoritative sources.
+              </strong>
+            </p>
           )}
-          
-          <MessageList 
-            messages={history} 
-            isLoading={loadingChats.has(activeChatId!)}
-            editingMessageIndex={editingMessageIndex}
-            editingContent={editingContent}
-            setEditingContent={setEditingContent}
-            onEditMessage={handleEditMessage}
-            onSaveEdit={handleSaveEdit}
-            onCancelEdit={handleCancelEdit}
-            isStreaming={isStreaming}
-          />
-
-          <ChatInput
-            input={input}
-            setInput={setInput}
-            isLoading={isLoading}
-            useWebSearch={useWebSearch}
-            setUseWebSearch={setUseWebSearch}
-            onSubmit={handleSubmit}
-            isStreaming={isStreaming}
-            onStop={() => {
-              if (streamController) {
-                streamController.abort();
-              }
-            }}
-          />
         </div>
 
-        {isEmpty && (
-          <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto text-responsive-sm">
-            <strong className="text-neutral-700 dark:text-neutral-300">Disclaimer:</strong> This system uses AI-generated content. The information provided may be incomplete, outdated, or incorrect.{" "}
-            <strong className="text-neutral-700 dark:text-neutral-300">
-              Do not rely on this tool as a sole source for decision-making. Always verify with official documentation and authoritative sources.
-            </strong>
-          </p>
-        )}
+        <ContextWindow 
+          contextChunks={contextData} 
+          isOpen={contextIsOpen}
+          setIsOpen={setContextIsOpen}
+          chatId={activeChatId}
+          token={token}
+        />
       </div>
+    </html>
 
-      <ContextWindow 
-        contextChunks={contextData} 
-        isOpen={contextIsOpen}
-        setIsOpen={setContextIsOpen}
-        chatId={activeChatId}
-        token={token}
-      />
-    </div>
   )
 }
