@@ -114,6 +114,7 @@ def login(data: LoginData):
     return {
         "access_token": token,
         "username": data.username
+        "password": data.password
     }
 
 CURRENT_CONFIG = {}
@@ -179,12 +180,6 @@ async def stream_query(
                     }
                 )
             else:
-                print("DEBUGS +++++++++++++++++++++++++++++++")
-                print(f"Looking for chat_id: {chat_id}, type: {type(chat_id)}")
-                print(existing_chat)
-                print(len(input.history))
-                print("Not editing...")
-                print("DEBUG END +++++++++++++++++++++++++++++++")
 
                 chats_collection.update_one(
                     {"_id": chat_id},
