@@ -6,6 +6,7 @@ import tempfile
 import time
 import uuid
 import yaml
+from datetime import datetime
 
 # Library-specific imports
 from fastapi import FastAPI, Header, HTTPException, Request, UploadFile, File
@@ -16,6 +17,8 @@ from ldap3 import Server, Connection, ALL
 from ldap3.core.exceptions import LDAPBindError
 from jose import jwt, JWTError
 from pymongo import MongoClient
+from pydantic import BaseModel
+from exchangelib import Credentials, Account, Configuration as ExchangeConfig, DELEGATE
 
 # Local imports
 from .rag import RAGPipeline, Message
@@ -101,9 +104,36 @@ def get_username_from_token(token: str) -> str:
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# Email Sync Models
+class EmailSyncRequest(BaseModel):
+    username: str
+    password: str
+    email_address: str
+    server: str
+    user_id: str
+
+class EmailSyncResponse(BaseModel):
+    status: str
+    message: str
+    emails_synced: int
+    total_emails: int
+
+def get_last_sync_date(existing_emails: dict) -> datetime | None:
+    if not existing_emails:
+        return None
+
+    dates = []
+    for email_data in existing_emails.values():
+        if 'datetime_recieved' in email_data:
+            try:
+                date = datetime.fromisoformat(email_data['datetime_received'].replace('Z', '+00:00'))
+                dates.append(date)
+            except:
+                continue
+
+    return max(dates) if dates else None
 
 # Endpoints
-
 @app.post("/login")
 def login(data: LoginData):
     user_dn = authenticate_user(data.username, data.password)
@@ -113,7 +143,7 @@ def login(data: LoginData):
     token = create_jwt_token(user_id=data.username)
     return {
         "access_token": token,
-        "username": data.username
+        "username": data.username,
         "password": data.password
     }
 
@@ -341,3 +371,105 @@ async def delete_chat_document(chat_id: str, filename: str):
             return {"message": f"Document {filename} deleted"}
     
     raise HTTPException(status_code=404, detail="Document not found")
+
+# Email Sync Endpoints
+
+@app.post("/sync-emails", response_model=EmailSyncResponse)
+async def sync_emails(request: EmailSyncRequest):
+    """Sync emails from Exchange server to MongoDB per user"""
+    try:
+        credentials = Credentials(username=request.username, password=request.password)
+        exchange_config = ExchangeConfig(
+            server=request.server,
+            credentials=credentials
+        )
+        account = Account(
+            primary_smtp_address=request.email_address,
+            config=exchange_config,
+            autodiscover=False,
+            access_type=DELEGATE
+        )
+
+        # Load existing emails from MongoDB
+        user_emails_doc = db["emails"].find_one({"user_id": request.user_id})
+        existing_emails = user_emails_doc["emails"] if user_emails_doc and "emails" in user_emails_doc else {}
+        last_sync_date = get_last_sync_date(existing_emails)
+
+        batch_size = 100
+        query = account.inbox.all().order_by("-datetime_received")
+
+        if last_sync_date:
+            query = account.inbox.filter(datetime_received_gt=last_sync_date).order_by("-datetime_received")
+
+        emails_to_process = list(query[:batch_size])
+        total_emails = len(emails_to_process)
+
+        if total_emails == 0:
+            # Save (or update) the doc in MongoDB even if no new emails
+            db["emails"].update_one(
+                {"user_id": request.user_id},
+                {"$set": {"emails": existing_emails}},
+                upsert=True
+            )
+            return EmailSyncResponse(
+                status="success",
+                message="No new emails to sync",
+                emails_synced=0,
+                total_emails=len(existing_emails)
+            )
+
+        emails_synced = 0
+
+        for item in emails_to_process:
+            try:
+                email_id = str(item.message_id) if hasattr(item, 'message_id') and item.message_id else f"{item.subject}_{item.datetime_received.isoformat()}"
+
+                if email_id in existing_emails:
+                    continue
+
+                email_data = {
+                    "id": email_id,
+                    "subject": str(item.subject) if item.subject else "No Subject",
+                    "sender": str(item.sender) if item.sender else "Unknown",
+                    "datetime_received": item.datetime_received.isoformat() if item.datetime_received else None,
+                    "body": str(item.text_body) if item.text_body else (str(item.body) if item.body else ""),
+                    "synced_at": datetime.now().isoformat()
+                }
+
+                existing_emails[email_id] = email_data
+                emails_synced += 1
+
+                time.sleep(0.1)
+
+            except Exception as e:
+                continue
+
+        # Save updated emails to MongoDB
+        db["emails"].update_one(
+            {"user_id": request.user_id},
+            {"$set": {"emails": existing_emails}},
+            upsert=True
+        )
+
+        return EmailSyncResponse(
+            status="success",
+            message=f"Successfully synced {emails_synced} new emails",
+            emails_synced=emails_synced,
+            total_emails=len(existing_emails)
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Email sync failed: {str(e)}")
+    
+@app.get("/emails/{user_id}")
+async def get_user_emails(user_id: str):
+    try:
+        user_emails_doc = db["emails"].find_one({"user_id": user_id})
+        emails = user_emails_doc["emails"] if user_emails_doc and "emails" in user_emails_doc else {}
+        return {
+            "status": "success",
+            "total_emails": len(emails),
+            "emails": list(emails.values())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load emails: {str(e)}")

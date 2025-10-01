@@ -1,8 +1,9 @@
 "use client"
 import { useState, useEffect, useRef  } from "react"
-import { Settings2, X, Palette } from "lucide-react"
+import { Settings2, Mail, Palette } from "lucide-react"
 import Dropdown from "@/components/Dropdown"
 import Slider from "@/components/Slider"
+import { EmailInbox } from '@/components/EmailInbox'
 
 interface SettingsMenuProps {
   open: boolean;
@@ -11,7 +12,7 @@ interface SettingsMenuProps {
   setTheme: (t: "light" | "dark") => void;
 }
 
-type TabKey = "general" | "personalization"
+type TabKey = "general" | "personalization" | "email"
 
 export default function SettingsMenu({
   open,
@@ -62,8 +63,6 @@ export default function SettingsMenu({
     const storedName = localStorage.getItem("nickname") || ""
     setNickname(storedName) 
   }, [])
-
-  // Theme is now controlled by parent and applied at the page level
 
   useEffect(() => {
     localStorage.setItem("nickname", nickname)
@@ -117,6 +116,17 @@ export default function SettingsMenu({
             >
               <Palette size={10} />
               <span>Personalization</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab("email")}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left mb-1 transition
+                ${activeTab === "email" 
+                  ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100" 
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                }`}
+            >
+              <Mail size={10} />
+              <span>Mail</span>
             </button>
           </nav>
           <div className="flex-1 p-6">
@@ -198,6 +208,22 @@ export default function SettingsMenu({
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-4 py-2 outline-none focus:ring-none"
+                  />
+                </div>
+              </div>
+            )}
+            {activeTab === "email" && (
+              <div className="flex flex-col gap-7">
+                <div>
+                  <EmailInbox 
+                    userId={localStorage.getItem("username")}
+                    token={localStorage.getItem("token")}
+                    emailCredentials={{
+                      username: localStorage.getItem("username"),
+                      password: localStorage.getItem("password"),
+                      email_address: localStorage.getItem("username") + `@${process.env.NEXT_PUBLIC_DOMAIN}`,
+                      server: `${process.env.NEXT_PUBLIC_SERVER}`
+                    }}
                   />
                 </div>
               </div>

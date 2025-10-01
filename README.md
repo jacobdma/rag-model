@@ -222,7 +222,11 @@ Create file .env in frontend/
 **NEXT_PUBLIC_HOST_IP** (required) is the IP of the hosting server.
 
 This will look like:
-```NEXT_PUBLIC_HOST_IP: my_host_ip```
+```
+NEXT_PUBLIC_HOST_IP: my_host_ip
+NEXT_PUBLIC_DOMAIN=my_email_domain
+NEXT_PUBLIC_SERVER=my_email_server
+```
 
 ## License Copies
 

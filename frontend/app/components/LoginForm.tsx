@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { getBackendUrl } from '@/utils/api';
 
 export default function LoginForm({
   onLogin,
@@ -33,6 +32,7 @@ export default function LoginForm({
       setToken(data.access_token);
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("username", data.username);
+      localStorage.setItem("password", data.password);
       onLogin(data.access_token, data.username);
     } catch (err: any) {
       setError(err.message || "Login error");

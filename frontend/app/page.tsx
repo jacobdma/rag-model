@@ -87,6 +87,7 @@ export default function Chat() {
           // Token is invalid, clear storage and show login
           localStorage.removeItem("access_token")
           localStorage.removeItem("username")
+          localStorage.removeItem("password")
           setToken(null)
           setUsername(null)
           setShowLoginForm(true)
@@ -209,6 +210,7 @@ export default function Chat() {
         // Token expired during request
         localStorage.removeItem("access_token")
         localStorage.removeItem("username")
+        localStorage.removeItem("password")
         setToken(null)
         setUsername(null)
         setShowLoginForm(true)
@@ -360,6 +362,7 @@ export default function Chat() {
     setActiveChatId(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
+    localStorage.removeItem("password");
   }
 
    function handleLogin(tok: string, user: string) {
@@ -397,6 +400,7 @@ export default function Chat() {
     setActiveChatId(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
+    localStorage.removeItem("password")
   }
 
   useEffect(() => {
