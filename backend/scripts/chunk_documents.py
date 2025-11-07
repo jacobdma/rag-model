@@ -77,11 +77,19 @@ class DocumentChunker:
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     loaded_by_source = json.load(f)
+                    # Validate that loaded data is a dictionary
+                    if not isinstance(loaded_by_source, dict):
+                        raise ValueError(f"Expected dict from cache, got {type(loaded_by_source).__name__}")
                     chunks_by_source = {
                         source: [Document(page_content=d["page_content"], metadata=d["metadata"]) for d in doc_list]
                         for source, doc_list in loaded_by_source.items()
+                        if isinstance(doc_list, list)  # Skip invalid entries
                     }
-                    return chunks_by_source
+                    # Only return if we successfully loaded at least some data
+                    if chunks_by_source:
+                        return chunks_by_source
+                    else:
+                        raise ValueError("No valid data found in cache")
             except Exception as e:
                 print(f"[ERROR] Chunked docs could not be loaded. Re-chunking... Exception: {e}")
 
@@ -89,8 +97,16 @@ class DocumentChunker:
         raw_documents = []
         if parsed_cache_path.exists():
             print(f"[CACHE] Loaded pre-parsed documents from {parsed_cache_path}")
-            with open(parsed_cache_path, "r", encoding="utf-8") as f:
-                raw_documents = json.load(f)
+            try:
+                with open(parsed_cache_path, "r", encoding="utf-8") as f:
+                    loaded_data = json.load(f)
+                    # Validate that loaded data is a list
+                    if not isinstance(loaded_data, list):
+                        raise ValueError(f"Expected list from parsed cache, got {type(loaded_data).__name__}")
+                    raw_documents = loaded_data
+            except Exception as e:
+                print(f"[WARN] Failed to load parsed cache, will re-parse: {e}")
+                raw_documents = []
         else:
             all_files = []
             for folder in self.folder_paths:

@@ -405,7 +405,6 @@ async def sync_emails(request: EmailSyncRequest):
         total_emails = len(emails_to_process)
 
         if total_emails == 0:
-            # Save (or update) the doc in MongoDB even if no new emails
             db["emails"].update_one(
                 {"user_id": request.user_id},
                 {"$set": {"emails": existing_emails}},

@@ -43,7 +43,7 @@ class HybridRetriever:
                 for future in as_completed(future_to_retriever):
                     retriever = future_to_retriever[future]
                     try:
-                        docs = future.result()  # Documents
+                        docs = future.result()
                         results.extend(docs)
                     except Exception as e:
                         print(f"[Pipeline] Retriever {retriever} failed: {e}")
@@ -85,7 +85,7 @@ class HybridRetriever:
         scored_docs = []
         for doc in docs:
             score = self._calculate_relevance_score(query_keywords, doc)
-            if score > 0.1:  # Minimum relevance threshold
+            if score > 0.1:
                 scored_docs.append((score, doc))
         
         # Sort by relevance score

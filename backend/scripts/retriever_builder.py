@@ -109,7 +109,7 @@ class RetrieverBuilder:
             print(f"[FAISS] Loaded in {time.time() - t0:.2f}s")
 
         hybrid_retriever = EnsembleRetriever(
-            retrievers=[bm25, faiss.as_retriever()],
+            retrievers=[bm25, faiss.as_retriever(search_type="mmr", search_kwargs={'k': 6, 'lambda_mult': 0.25})],
             weights=[0.5, 0.5]
         )
 
