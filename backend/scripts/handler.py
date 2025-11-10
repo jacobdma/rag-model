@@ -104,7 +104,7 @@ class TechnicalHandler():
         elif category == "coding":
             yield from self._handle_coding(query)
         elif category == "mixed":
-            yield from self._handle_mixed(query, chat_history)
+            yield from self._handle_mixed(query, chat_history, retriever=self.hybrid_retriever)
         else:
             yield f"Unknown technical category: {category}"
     

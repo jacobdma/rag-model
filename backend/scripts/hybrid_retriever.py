@@ -1,16 +1,18 @@
 # Standard library imports
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Third-party imports
-from langchain.retrievers import EnsembleRetriever
+from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 # Local imports
 from .config import templates
 
 class HybridRetriever:
+    def __init__(self, bm25: BM25Retriever, faiss_retriever):
+        self.bm25 = bm25
+        self.faiss_retriever = faiss_retriever
 
     @staticmethod
     def query_reform(query: str, prompt) -> str:
@@ -25,44 +27,42 @@ class HybridRetriever:
 
         return rewrite_output
     
-    def retrieve_context(self, query: str, hybrid_retriever: EnsembleRetriever, max_results: int = 5) -> list[Document]:
+    def retrieve_context(self, query: str, max_results: int = 5) -> list[Document]:
         """
-        Retrieves content by invoking retrievers in EnsembleRetriever
+        Retrieves content by invoking retrievers in Hybrid Retriever
         """
         seen_content = set()
-        unique_chunks = []
+        docs = []
         try:
             # Parallelize each retriever in the ensemble
-            retrievers = hybrid_retriever.retrievers
-            results = []
-            with ThreadPoolExecutor() as executor:
-                future_to_retriever = {
-                    executor.submit(retriever.invoke, query): retriever
-                    for retriever in retrievers
-                }
-                for future in as_completed(future_to_retriever):
-                    retriever = future_to_retriever[future]
-                    try:
-                        docs = future.result()
-                        results.extend(docs)
-                    except Exception as e:
-                        print(f"[Pipeline] Retriever {retriever} failed: {e}")
-
+            results = self.get_relevant_documents(query)
             for doc in results:
                 content = doc.page_content
                 if not self._filter_chunk(content):
                     continue
                 if content not in seen_content:
                     seen_content.add(content)
-                    unique_chunks.append(doc)
+                    docs.append(doc)
                 
-            filtered_docs = self._filter_by_relevance(query, unique_chunks)
+            docs = self._filter_by_relevance(query, docs)
 
         except Exception as e:
             print(f"[Retrieval] Query failed: {e}")
             traceback.print_exc()
 
-        return filtered_docs[:max_results]
+        return docs[:max_results]
+    
+    def get_relevant_documents(self, query: str, k: int = 4) -> list[Document]:
+        bm25_docs = self.bm25.invoke(query)
+        faiss_docs = self.faiss_retriever.invoke(query)
+
+        # Deduplicate results by content
+        seen, merged = set(), []
+        for doc in bm25_docs + faiss_docs:
+            if doc.page_content not in seen:
+                seen.add(doc.page_content)
+                merged.append(doc)
+        return merged[:k]
 
     @staticmethod
     def _filter_chunk(doc: str) -> bool:

@@ -29,10 +29,7 @@ class RAGPipeline:
         with self.lock:
             if RAGPipeline.engine is None:
                 RAGPipeline.engine = get_llm_engine()
-            if RAGPipeline.hybrid_retriever is None:
-                RAGPipeline.hybrid_retriever = HybridRetriever()
         self.engine = RAGPipeline.engine
-        self.hybrid_retriever = RAGPipeline.hybrid_retriever
 
         with open("config.yaml", "r") as f:
             config = yaml.safe_load(f)
@@ -136,7 +133,7 @@ class RAGPipeline:
             
             elif classification in ["math", "coding", "mixed"]:
                 # Route to technical handler
-                for token in TechnicalHandler(self.engine, self.hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
+                for token in TechnicalHandler(self.engine, hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
                     yield token
                 return None
 
@@ -164,13 +161,13 @@ class RAGPipeline:
             
             # 5. Reform query for better retrieval/response
             t0 = time.time()
-            # refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
+            refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
             print(f"[5. Query Reform] Completed in {time.time() - t0:.2f}s")
-            # print(f"Refined Query: {refined_query}")
+            print(f"Refined Query: {refined_query}")
 
             # 6. Invokes retrievers to get relevant chunks
             t0 = time.time()
-            docs = self.hybrid_retriever.retrieve_context(query, hybrid_retriever, max_results=5) 
+            docs = hybrid_retriever.retrieve_context(query, max_results=5) 
             print(f"[6. Retrieval] Retrieved {len(docs)} chunks in {time.time() - t0:.2f}s")
 
              # 7. Get uploaded chat documents if chat_id provided
@@ -241,7 +238,7 @@ class RAGPipeline:
             )
             for token in streamer:
                 yield token
-            print(f"[9. LLM Response] Generated in {time.time() - t0:.2f}s")
+            print(f"[9. LLM Response] Generated from {len(prompt)} characters in {time.time() - t0:.2f}s")
             return None
         except Exception as e:
             yield f"\n[Error]: {e}\n"

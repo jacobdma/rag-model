@@ -9,12 +9,12 @@ import dill
 from tqdm import tqdm
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
-from sentence_transformers import SentenceTransformer
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
 # Local imports
 from .chunk_documents import DocumentChunker
+from .hybrid_retriever import HybridRetriever
 from .load_utils import CACHE_DIR
 
 class RetrieverBuilder:
@@ -30,20 +30,17 @@ class RetrieverBuilder:
         self.faiss_path = os.path.join(self.index_dir, f"faiss.dill")
         self.chunker = DocumentChunker(self.folder_paths)
 
-    def build_faiss(self, docs):
+    def build_faiss(self, docs, embeddings):
         if not os.path.exists(self.faiss_path):
-            model = SentenceTransformer("BAAI/bge-large-en-v1.5", device="cuda")
-            model = model.half()
-            
             try:
                 cache_path = CACHE_DIR / f"faiss_embeddings.pkl"
                 
                 if cache_path.exists():
                     print("[FAISS] Loading cached embeddings...")
-                    embeddings = self._load_embeddings(cache_path, docs)
+                    embedding_vectors = self._load_embeddings(cache_path, docs)
                 else:
                     print("[FAISS] Generating embeddings...")
-                    embeddings = self._generate_embeddings(model, cache_path, docs)
+                    embedding_vectors = self._generate_embeddings(model, cache_path, docs)
                 
             finally:
                 torch.cuda.empty_cache()
@@ -54,19 +51,19 @@ class RetrieverBuilder:
             print(f"[WARN] No documents to embed. Skipping FAISS build.")
             return
         
-        print(f"[FAISS] Building index with {len(embeddings)} documents")
+        print(f"[FAISS] Building index with {len(embedding_vectors)} documents")
         
         batch_size = 5000
         metadatas = [doc.metadata for doc in docs]
         
         # Create initial FAISS store with first batch
-        first_batch_size = min(batch_size, len(embeddings))
-        first_batch = embeddings[:batch_size]
+        first_batch_size = min(batch_size, len(embedding_vectors))
+        first_batch = embedding_vectors[:batch_size]
         first_metadatas = metadatas[:batch_size]
-        faiss_store = FAISS.from_embeddings(first_batch, embedding=model, metadatas=first_metadatas)
+        faiss_store = FAISS.from_embeddings(first_batch, embedding=embeddings, metadatas=first_metadatas)
         
-        for i in range(batch_size, len(embeddings), batch_size):
-            batch = embeddings[i:i + batch_size]
+        for i in range(batch_size, len(embedding_vectors), batch_size):
+            batch = embedding_vectors[i:i + batch_size]
             batch_metadatas = metadatas[i:i + batch_size]
 
             faiss_store.add_embeddings(
@@ -77,18 +74,21 @@ class RetrieverBuilder:
             del batch, batch_metadatas
             gc.collect()
 
-        del embeddings, metadatas, model
+        del embedding_vectors, metadatas, model
         torch.cuda.empty_cache()
         gc.collect()
         
         faiss_store.save_local(self.faiss_path)
 
         return faiss_store
+    
 
     def build_retrievers(self) -> tuple[dict[str, BM25Retriever], dict[str, FAISS], dict[str, dict[str, list[Document]]]]:
         """Load or build BM25 and FAISS retrievers, caching FAISS in memory. Returns chunk dict as dict[source] = [docs]."""
-        model = SentenceTransformer("BAAI/bge-large-en-v1.5", device="cuda")
-        model = model.half()
+        embeddings = HuggingFaceEmbeddings(
+            model_name="BAAI/bge-large-en-v1.5",
+            model_kwargs={'device': 'cuda'}
+        )
 
         # Build missing retrievers
         chunks_by_source = self.chunker.get_chunks(self.CHUNK_SIZE, self.CHUNK_OVERLAP)
@@ -105,13 +105,11 @@ class RetrieverBuilder:
             faiss = self.build_faiss(docs)
         else:
             t0 = time.time()
-            faiss = FAISS.load_local(self.faiss_path, model, allow_dangerous_deserialization=True)
+            faiss = FAISS.load_local(self.faiss_path, embeddings, allow_dangerous_deserialization=True)
             print(f"[FAISS] Loaded in {time.time() - t0:.2f}s")
 
-        hybrid_retriever = EnsembleRetriever(
-            retrievers=[bm25, faiss.as_retriever(search_type="mmr", search_kwargs={'k': 6, 'lambda_mult': 0.25})],
-            weights=[0.5, 0.5]
-        )
+        faiss_retriever = faiss.as_retriever(search_type="similarity", search_kwargs={'k': 6})
+        hybrid_retriever = HybridRetriever(bm25, faiss_retriever)
 
         return hybrid_retriever, chunks_by_source
 

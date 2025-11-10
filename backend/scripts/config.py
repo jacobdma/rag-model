@@ -98,13 +98,13 @@ Original: how tall is the eifel Towr
 Rewritten: How tall is the Eiffel Tower?
 
 Original: 2 boards that are 3in long, how many cm is that?
-Rewritten: If I have 2 boards that are 3 inches long, how many centimeters is that?
+Rewritten: 2 boards that are 3 inches long, how many centimeters is that?
 
 Original: whats the point the article
-Rewritten: What is the main point of the article?
+Rewritten: What is the point of the article?
 
 Original: parts r rubbin
-Rewritten: What causes parts to rub against each other?
+Rewritten: Parts are rubbing
 
 If you do not recognize a word or acronym, do not try to rewrite it.
 Only rewrite the user's question. Do not insert, remove, or hallucinate content. 

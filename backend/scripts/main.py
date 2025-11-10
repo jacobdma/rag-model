@@ -2,7 +2,11 @@
 import json
 import os
 import pathlib
+import psutil
+import signal
+import sys
 import tempfile
+import threading
 import time
 import uuid
 import yaml
@@ -38,6 +42,22 @@ pipeline = RAGPipeline()
 ldap = config.get("ldap", {})
 SECRET_KEY = config.get("secret_key", "your-secret-key")
 server = Server(ldap["server"], get_info=ALL)
+
+
+def kill_process():
+    """Kill this process and all its children immediately."""
+    print("Killing backend process tree due to timeout.")
+    try:
+        parent = psutil.Process(os.getpid())
+        for child in parent.children(recursive=True):
+            try:
+                child.kill()
+            except Exception:
+                pass
+        parent.kill()
+    except Exception as e:
+        print("Failed to kill with psutil:", e)
+        os._exit(1)  # ultimate fallback
 
 def authenticate_user(username: str, password: str) -> str | None:
     conn = Connection(server, user=ldap["user"], password=ldap["password"], auto_bind=True)
@@ -179,18 +199,42 @@ async def stream_query(
             input.use_double_retrievers,
             chat_id=chat_id
         )
-        first_yield = next(generator)
-        if isinstance(first_yield, list):
-            # Send the full group structure, not a flattened list
-            context_str = f"[CONTEXT START]{json.dumps(first_yield)}[CONTEXT END]"
-            yield context_str
-        else:  # String token
-            yield first_yield
-        for chunk in generator:
-            if await request.is_disconnected():
-                break
-            assistant_reply += str(chunk)
-            yield chunk
+
+        # --- Timeout watchdog ---
+        last_yield_time = time.time()
+        TIMEOUT = 60
+        stop_watchdog = threading.Event()
+
+        def watchdog():
+            while not stop_watchdog.is_set():
+                time.sleep(1)
+                if time.time() - last_yield_time > TIMEOUT:
+                    print(f"No progress for {TIMEOUT}s — killing backend.")
+                    kill_process()
+                    return
+
+        threading.Thread(target=watchdog, daemon=True).start()
+
+        try:
+            first_yield = next(generator)
+            last_yield_time = time.time()  # reset timer on progress
+
+            if isinstance(first_yield, list):
+                context_str = f"[CONTEXT START]{json.dumps(first_yield)}[CONTEXT END]"
+                yield context_str
+            else:
+                yield first_yield
+
+            for chunk in generator:
+                if await request.is_disconnected():
+                    break
+                last_yield_time = time.time()  # reset timer every time a token arrives
+                assistant_reply += str(chunk)
+                yield chunk
+
+        finally:
+            stop_watchdog.set()
+
 
         # Only save if not interrupted
         if not await request.is_disconnected():
