@@ -386,6 +386,7 @@ async def upload_files(
         "total_documents": len(CHAT_DOCUMENTS[chat_id])
     }
 
+'''
 @app.get("/chat-documents/{chat_id}")
 async def get_chat_documents(chat_id: str):
     """Get uploaded documents for a specific chat"""
@@ -401,6 +402,7 @@ async def get_chat_documents(chat_id: str):
             for doc in documents
         ]
     }
+'''
 
 @app.delete("/chat-documents/{chat_id}/{filename}")
 async def delete_chat_document(chat_id: str, filename: str):
@@ -516,3 +518,27 @@ async def get_user_emails(user_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load emails: {str(e)}")
+    
+@app.get("/emails/{query}")
+async def search_user_emails(request: EmailSyncRequest, query: str):
+    try:
+        credentials = Credentials(username=request.username, password=request.password)
+        exchange_config = ExchangeConfig(
+            server=request.server,
+            credentials=credentials
+        )
+        account = Account(
+            primary_smtp_address=request.email_address,
+            config=exchange_config,
+            autodiscover=False,
+            access_type=DELEGATE
+        )
+        emails = []
+        emails.append(account.inbox.filter(subject__contains=query))
+        # add support for body filtering later
+
+        
+
+    except Exception as e:
+        return HTTPException(status_code=500, detail=f"Failed to search emails: {str(e)}")
+

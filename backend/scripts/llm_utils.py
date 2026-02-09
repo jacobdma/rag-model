@@ -39,11 +39,11 @@ class LLMEngine:
                 token=self.token,
                 low_cpu_mem_usage=True,
                 device_map={"": device},
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
                 use_cache=True,
-                trust_remote_code=True
+                trust_remote_code=True,
+                attn_implementation="sdpa"
             )
-            self._model = self._model.to(device)
         return self._model, self._tokenizer
     
     def cleanup(self):
@@ -60,7 +60,7 @@ class LLMEngine:
                 device = next(model.parameters()).device
 
                 with torch.no_grad():
-                    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+                    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
                     input_ids = inputs.input_ids.to(device, non_blocking=True)
                     attention_mask = inputs.attention_mask.to(device, non_blocking=True)
                 token = tokenizer.eos_token_id
@@ -82,7 +82,6 @@ class LLMEngine:
                     def generate_sync():
                         try:
                             with torch.no_grad():
-                                model.eval()
                                 outputs = model.generate(**generation_kwargs)
                         except Exception as e:
                             print(f"Error occurred during generation: {e}")
@@ -97,7 +96,6 @@ class LLMEngine:
                     thread.start()
                     return streamer
                 else:
-                    model.eval()
                     outputs = model.generate(**generation_kwargs)
                     if hasattr(outputs, 'sequences'):
                         generated_ids = outputs.sequences[0]

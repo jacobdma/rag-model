@@ -108,7 +108,7 @@ class RetrieverBuilder:
             faiss = FAISS.load_local(self.faiss_path, embeddings, allow_dangerous_deserialization=True)
             print(f"[FAISS] Loaded in {time.time() - t0:.2f}s")
 
-        faiss_retriever = faiss.as_retriever(search_type="similarity", search_kwargs={'k': 6})
+        faiss_retriever = faiss.as_retriever(search_type="mmr", search_kwargs={'k': 6})
         hybrid_retriever = HybridRetriever(bm25, faiss_retriever)
 
         return hybrid_retriever, chunks_by_source
@@ -125,7 +125,6 @@ class RetrieverBuilder:
                 except EOFError:
                     break
 
-        # vectors = [v.tolist() if hasattr(v, 'tolist') else v for v in vectors]
         return list(zip(texts, vectors))
 
     def _generate_embeddings(self, model, cache_path: str, docs: list[Document]) -> list[tuple[str, list[float]]]:

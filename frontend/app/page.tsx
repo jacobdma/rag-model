@@ -2,13 +2,14 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { v4 } from "uuid"
 
-import { ChatInput, MessageList, Message } from "@/components/chat"
+import { ChatInput, MessageList } from "@/components/chat"
 import SettingsMenu from "@/components/SettingsMenu"
 import { Sidebar } from "@/components/Sidebar"
 import LoginForm from "@/components/LoginForm"
 import { ContextWindow } from "@/components/ContextWindow"
+
+import { ChatSession, Message } from "@/hooks/useChats"
 
 const WELCOME_MESSAGES = [
   "What can I help you find today?",
@@ -25,12 +26,6 @@ function getRandomGreeting(): string {
   return WELCOME_MESSAGES[randomIndex];
 }
 
-type ChatSession = {
-  id: string
-  name: string
-  history: Message[]
-}
-
 export default function Chat() {
 
   // Chat states
@@ -44,8 +39,6 @@ export default function Chat() {
   const [useWebSearch, setUseWebSearch] = useState(false)
 
   // Authentication state
-  const [token, setToken] = useState<string | null>(null)
-  const [username, setUsername] = useState<string | null>(null)
   const [showLoginForm, setShowLoginForm] = useState(false);
 
   // Streaming state
@@ -73,7 +66,7 @@ export default function Chat() {
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
     const initialTheme = storedTheme ?? (prefersDark ? "dark" : "light")
     setTheme(initialTheme)
-
+ 
     const storedToken = localStorage.getItem("access_token")
     const storedUsername = localStorage.getItem("username")
     
@@ -120,7 +113,6 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem("theme", theme)
   }, [theme])
-
 
   const activeChat = chats.find((c) => c.id === activeChatId)
   const history = activeChat?.history ?? []
@@ -351,20 +343,6 @@ export default function Chat() {
     }
   }, [history, activeChatId])
 
-  function handleSignIn() {
-    setShowLoginForm(true);
-  }
-
-  function handleSignOut() {
-    setToken(null);
-    setUsername(null);
-    setChats([]);
-    setActiveChatId(null);
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("password");
-  }
-
    function handleLogin(tok: string, user: string) {
     setToken(tok);
     setUsername(user);
@@ -392,15 +370,19 @@ export default function Chat() {
     })
   }
 
-  function handleGuest() {
-    setShowLoginForm(false);
+  function handleSignOut() {
     setToken(null);
     setUsername(null);
     setChats([]);
     setActiveChatId(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
-    localStorage.removeItem("password")
+    localStorage.removeItem("password");
+  }
+
+  function handleGuest() {
+    setShowLoginForm(false);
+    handleSignOut();
   }
 
   useEffect(() => {
@@ -410,10 +392,7 @@ export default function Chat() {
   }, [activeChatId])
 
   return showLoginForm
-  ? <LoginForm
-      onLogin={handleLogin}
-      onGuest={handleGuest}
-    />
+  ? <LoginForm onLogin={handleLogin} onGuest={handleGuest} />
   : (
     <html className={theme === "dark" ? "dark" : ""}>
       <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
@@ -429,9 +408,9 @@ export default function Chat() {
           activeChatId={activeChatId}
           setActiveChatId={setActiveChatId}
           setChats={setChats}
-          currentChatIsEmpty={currentChatIsEmpty}
+          currentChatIsEmpty={isEmpty}
           username={username}
-          onSignIn={handleSignIn}
+          onSignIn={() => setShowLoginForm(true)}
           onSignOut={handleSignOut}
           onOpenSettings={() => setSettingsOpen(true)}
           loadingChats={loadingChats}
