@@ -31,6 +31,8 @@ class RetrieverBuilder:
         self.chunker = DocumentChunker(self.folder_paths)
 
     def build_faiss(self, docs, embeddings):
+        # Underlying SentenceTransformer model used for encoding
+        model = embeddings._client
         if not os.path.exists(self.faiss_path):
             try:
                 cache_path = CACHE_DIR / f"faiss_embeddings.pkl"
@@ -102,7 +104,7 @@ class RetrieverBuilder:
             with open(self.bm25_path, "rb") as f:
                 bm25 = dill.load(f)
         if not os.path.exists(self.faiss_path):
-            faiss = self.build_faiss(docs)
+            faiss = self.build_faiss(docs, embeddings)
         else:
             t0 = time.time()
             faiss = FAISS.load_local(self.faiss_path, embeddings, allow_dangerous_deserialization=True)

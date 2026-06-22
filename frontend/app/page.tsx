@@ -2,14 +2,13 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { v4 } from "uuid"
 
-import { ChatInput, MessageList } from "@/components/chat"
+import { ChatInput, MessageList, Message } from "@/components/chat"
 import SettingsMenu from "@/components/SettingsMenu"
 import { Sidebar } from "@/components/Sidebar"
 import LoginForm from "@/components/LoginForm"
 import { ContextWindow } from "@/components/ContextWindow"
-
-import { ChatSession, Message } from "@/hooks/useChats"
 
 const WELCOME_MESSAGES = [
   "What can I help you find today?",
@@ -26,6 +25,12 @@ function getRandomGreeting(): string {
   return WELCOME_MESSAGES[randomIndex];
 }
 
+type ChatSession = {
+  id: string
+  name: string
+  history: Message[]
+}
+
 export default function Chat() {
 
   // Chat states
@@ -39,6 +44,8 @@ export default function Chat() {
   const [useWebSearch, setUseWebSearch] = useState(false)
 
   // Authentication state
+  const [token, setToken] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
   const [showLoginForm, setShowLoginForm] = useState(false);
 
   // Streaming state
@@ -66,10 +73,10 @@ export default function Chat() {
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
     const initialTheme = storedTheme ?? (prefersDark ? "dark" : "light")
     setTheme(initialTheme)
- 
+
     const storedToken = localStorage.getItem("access_token")
     const storedUsername = localStorage.getItem("username")
-    
+
     if (storedToken && storedUsername) {
       // Validate token by trying to fetch chats
       fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chats`, {
@@ -114,6 +121,7 @@ export default function Chat() {
     localStorage.setItem("theme", theme)
   }, [theme])
 
+
   const activeChat = chats.find((c) => c.id === activeChatId)
   const history = activeChat?.history ?? []
   const currentChatIsEmpty = history.length === 0
@@ -128,7 +136,7 @@ export default function Chat() {
 
   const handleSubmit = async (e: React.FormEvent, messageContent?: string, fromIndex?: number) => {
     e.preventDefault();
-    
+
     const messageToSend = messageContent || input.trim();
     if (!messageToSend) return;
 
@@ -182,17 +190,17 @@ export default function Chat() {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
-  
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-  
+
       const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chat`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ 
-          query: userMessage.content, 
-          history: editedHistory, 
+        body: JSON.stringify({
+          query: userMessage.content,
+          history: editedHistory,
           use_web_search: useWebSearch,
           chat_id: currentActiveChatId
         }),
@@ -313,10 +321,8 @@ export default function Chat() {
   const handleCancelEdit = () => {
     setEditingMessageIndex(null);
     setEditingContent("");
-  } 
-  
-  const isEmpty = history.length === 0
-  
+  }
+
   useEffect(() => {
     if (chats.length === 0 && !activeChatId) {
       const newChatId = v4();
@@ -343,13 +349,27 @@ export default function Chat() {
     }
   }, [history, activeChatId])
 
+  function handleSignIn() {
+    setShowLoginForm(true);
+  }
+
+  function handleSignOut() {
+    setToken(null);
+    setUsername(null);
+    setChats([]);
+    setActiveChatId(null);
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("password");
+  }
+
    function handleLogin(tok: string, user: string) {
     setToken(tok);
     setUsername(user);
     localStorage.setItem("access_token", tok);
     localStorage.setItem("username", user);
     setShowLoginForm(false);
-    
+
     fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chats`, {
       headers: { Authorization: `Bearer ${tok}` },
     })
@@ -370,19 +390,15 @@ export default function Chat() {
     })
   }
 
-  function handleSignOut() {
+  function handleGuest() {
+    setShowLoginForm(false);
     setToken(null);
     setUsername(null);
     setChats([]);
     setActiveChatId(null);
     localStorage.removeItem("access_token");
     localStorage.removeItem("username");
-    localStorage.removeItem("password");
-  }
-
-  function handleGuest() {
-    setShowLoginForm(false);
-    handleSignOut();
+    localStorage.removeItem("password")
   }
 
   useEffect(() => {
@@ -392,7 +408,10 @@ export default function Chat() {
   }, [activeChatId])
 
   return showLoginForm
-  ? <LoginForm onLogin={handleLogin} onGuest={handleGuest} />
+  ? <LoginForm
+      onLogin={handleLogin}
+      onGuest={handleGuest}
+    />
   : (
     <html className={theme === "dark" ? "dark" : ""}>
       <div className="bg-neutral-200 dark:bg-neutral-800 font-sans h-screen overflow-hidden flex">
@@ -408,9 +427,9 @@ export default function Chat() {
           activeChatId={activeChatId}
           setActiveChatId={setActiveChatId}
           setChats={setChats}
-          currentChatIsEmpty={isEmpty}
+          currentChatIsEmpty={currentChatIsEmpty}
           username={username}
-          onSignIn={() => setShowLoginForm(true)}
+          onSignIn={handleSignIn}
           onSignOut={handleSignOut}
           onOpenSettings={() => setSettingsOpen(true)}
           loadingChats={loadingChats}
@@ -418,21 +437,21 @@ export default function Chat() {
           streamController={streamController}
         />
 
-        <div 
-          className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-2" 
+        <div
+          className="flex-1 flex flex-col items-center p-4 relative bg-white dark:bg-neutral-900 rounded-lg m-2"
           style={{ marginRight: '25vw', marginLeft: "3vw"}}
         >
-          <div className={`w-full max-w-4xl flex flex-col items-center h-full ${isEmpty ? "justify-center" : ""}`}>
-            {isEmpty && (
+          <div className={`w-full max-w-4xl flex flex-col items-center h-full ${currentChatIsEmpty ? "justify-center" : ""}`}>
+            {currentChatIsEmpty && (
               <div className="text-center">
                 <p className="font-medium text-neutral-700 dark:text-neutral-300 text-responsive-5xl">
                   {randomGreeting}
                 </p>
               </div>
             )}
-            
-            <MessageList 
-              messages={history} 
+
+            <MessageList
+              messages={history}
               isLoading={loadingChats.has(activeChatId!)}
               editingMessageIndex={editingMessageIndex}
               editingContent={editingContent}
@@ -459,7 +478,7 @@ export default function Chat() {
             />
           </div>
 
-          {isEmpty && (
+          {currentChatIsEmpty && (
             <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-center text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto text-responsive-sm">
               <strong className="text-neutral-700 dark:text-neutral-300">Disclaimer:</strong> This system uses AI-generated content. The information provided may be incomplete, outdated, or incorrect.{" "}
               <strong className="text-neutral-700 dark:text-neutral-300">
@@ -469,8 +488,8 @@ export default function Chat() {
           )}
         </div>
 
-        <ContextWindow 
-          contextChunks={contextData} 
+        <ContextWindow
+          contextChunks={contextData}
           isOpen={contextIsOpen}
           setIsOpen={setContextIsOpen}
           chatId={activeChatId}

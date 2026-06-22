@@ -259,7 +259,7 @@ class TechnicalHandler():
         """Handle context retrieval component"""
         try:
                 
-            docs = self.hybrid_retriever.retrieve_context(query, retriever)
+            docs = self.hybrid_retriever.retrieve_context(query)
             
             if not docs:
                 yield "No relevant documentation found.\n"

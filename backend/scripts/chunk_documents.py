@@ -3,7 +3,6 @@ import json
 import re
 import os
 import logging
-import json
 from collections import defaultdict
 from concurrent.futures import as_completed
 from concurrent.futures import ThreadPoolExecutor
@@ -61,10 +60,6 @@ class DocumentChunker:
                     doc = Document(page_content=chunk, metadata=metadata)
                     cleaned_chunks.append(doc)
                     chunk_number += 1
-
-                unique_tokens = set(chunk.split())
-                if len(unique_tokens) < 5:
-                    continue
         return cleaned_chunks
     
     # Runs document chunking in parallel for faster processing

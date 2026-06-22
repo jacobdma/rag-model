@@ -103,7 +103,7 @@ class RAGPipeline:
         
         return chat_docs
 
-    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, use_double_retrievers: bool = True, chat_id: str = None):
+    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, chat_id: str = None):
         """Stream the RAG pipeline for interactive question answering."""
         start_time = time.time()
         # 1. Load retrievers
@@ -158,12 +158,6 @@ class RAGPipeline:
 
             history_chain = history_chain[::-1]
             print(f"[4. Chat History] Processed {len(history_chain)} pairs in {time.time() - t0:.2f}s")
-            
-            # 5. Reform query for better retrieval/response
-            t0 = time.time()
-            refined_query = HybridRetriever.query_reform(query, self.engine.prompt)
-            print(f"[5. Query Reform] Completed in {time.time() - t0:.2f}s")
-            print(f"Refined Query: {refined_query}")
 
             # 6. Invokes retrievers to get relevant chunks
             t0 = time.time()
@@ -219,13 +213,11 @@ class RAGPipeline:
                 return f"{label}:\n{content.strip()}\n\n" if content else ""
  
             history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
-            refined_query = None # placeholder
             prompt = config.RESPONSE_PREFIX.format(
                 context=format_block("Context", context),
                 history=format_block("Chat History", "\n".join(history_lines)),
                 web_context=format_block("Web Context", web_results),
-                original_query=format_block("Original Query", query),
-                refined_query=format_block("Refined Query", refined_query)
+                original_query=format_block("Original Query", query)
             )
             print(f"[8. Prompt] Constructed in {time.time() - t0:.2f}s")
 

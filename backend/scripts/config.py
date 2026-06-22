@@ -35,7 +35,7 @@ Guidelines:
 If the question is fully answered, stop.
 Do not add unrelated information.
 
-{context}{history}{web_context}{original_query}{refined_query}Answer:"""
+{context}{history}{web_context}{original_query}Answer:"""
 
 HISTORY_PROMPT_TEMPLATE = """
 Determine if the Current Question depends on the Previous Interaction for understanding or answering.

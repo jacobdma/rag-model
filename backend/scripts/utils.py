@@ -12,7 +12,6 @@ class QueryInput(BaseModel):
     query: str
     history: list[Message] = []
     use_web_search: bool
-    use_double_retrievers: bool = True
     chat_id: str | None = None
 
 class Configuration(BaseModel):

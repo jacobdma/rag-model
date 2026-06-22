@@ -40,7 +40,11 @@ app = FastAPI()
 pipeline = RAGPipeline()
 
 ldap = config.get("ldap", {})
-SECRET_KEY = config.get("secret_key", "your-secret-key")
+SECRET_KEY = config.get("secret_key")
+if not SECRET_KEY or SECRET_KEY == "your-secret-key":
+    raise RuntimeError("secret_key must be set to a strong, unique value in config.yaml")
+# How long an issued JWT stays valid (default: 7 days)
+TOKEN_TTL_SECONDS = int(config.get("token_ttl_hours", 168)) * 3600
 server = Server(ldap["server"], get_info=ALL)
 
 
@@ -75,9 +79,11 @@ def authenticate_user(username: str, password: str) -> str | None:
         return None
 
 def create_jwt_token(user_id: str) -> str:
+    now = int(time.time())
     payload = {
         "sub": user_id,
-        "iat": int(time.time())
+        "iat": now,
+        "exp": now + TOKEN_TTL_SECONDS
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
@@ -86,8 +92,8 @@ get_llm_engine()._load_model(ModelConfig.MODEL)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=config.get("allowed_origins", ["*"]),
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -163,14 +169,13 @@ def login(data: LoginData):
     token = create_jwt_token(user_id=data.username)
     return {
         "access_token": token,
-        "username": data.username,
-        "password": data.password
+        "username": data.username
     }
 
 CURRENT_CONFIG = {}
 @app.post("/set-config")
 async def set_config(config: Configuration):
-    CURRENT_CONFIG.update(config.dict())
+    CURRENT_CONFIG.update(config.model_dump())
     return {"message": "Config updated", "config": CURRENT_CONFIG}
 
 @app.post("/chat")
@@ -196,7 +201,6 @@ async def stream_query(
             input.query,
             input.history,
             input.use_web_search,
-            input.use_double_retrievers,
             chat_id=chat_id
         )
 
@@ -246,7 +250,7 @@ async def stream_query(
                     {"_id": chat_id},
                     {
                         "$set": {
-                            "history": [msg.dict() if hasattr(msg, 'dict') else {'role': msg.role, 'content': msg.content} for msg in input.history] + [
+                            "history": [msg.model_dump() if hasattr(msg, 'model_dump') else {'role': msg.role, 'content': msg.content} for msg in input.history] + [
                                 {"role": "user", "content": input.query},
                                 {"role": "assistant", "content": assistant_reply}
                             ]
