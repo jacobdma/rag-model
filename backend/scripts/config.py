@@ -1,4 +1,5 @@
 """Configuration file for model settings, prompt templates, and external API URLs."""
+import os
 import yaml
 
 # === Model & API Settings ===
@@ -9,6 +10,20 @@ with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
 BING_API_KEY, MODEL_TOKEN = config["BING_API_KEY"], config["MODEL_TOKEN"]
+
+# === Shared inference (Ollama) ===
+# The LLM is served by a shared Ollama process that owns the GPU, so multiple
+# backend instances (prod + dev) share one model copy. Each value can be
+# overridden by an environment variable (used by the Docker containers) and
+# otherwise falls back to config.yaml, then a sane default.
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", config.get("ollama_host", "http://localhost:11434"))
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", config.get("ollama_model", "mistral:7b-instruct-q5_K_M"))
+OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", config.get("ollama_num_ctx", 4096)))
+OLLAMA_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", config.get("ollama_keep_alive", -1))
+
+# Device for the bge embedding model. Default cpu so serving leaves the GPU
+# entirely to Ollama; set to "cuda" for fast offline index builds.
+EMBED_DEVICE = os.environ.get("EMBED_DEVICE", config.get("embed_device", "cpu"))
 
 class ModelConfig:
     TONE: str = "Formal"

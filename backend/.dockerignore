@@ -1,0 +1,16 @@
+# Build artifacts / caches — never bake into the image
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Secrets + per-deploy data — mounted as volumes at runtime instead
+config.yaml
+indexes/
+sourceless_indexes/
+cache/
+sourceless_cache/
+downloaded_files/
+logs/
+*.log
+.env
+.env.*

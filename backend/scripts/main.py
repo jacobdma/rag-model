@@ -115,7 +115,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Load chats
-client = MongoClient(config["mongo_uri"])
+client = MongoClient(os.environ.get("MONGO_URI", config["mongo_uri"]))
 db = client["chat_app"]
 chats_collection = db["chats"]
 

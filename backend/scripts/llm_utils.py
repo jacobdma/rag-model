@@ -1,15 +1,28 @@
-import threading
-import time
-import torch
-import gc
-from queue import Queue
-from . import config
-from .config import ModelConfig
+"""LLM engine backed by a shared Ollama inference server.
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from transformers.generation.streamers import TextIteratorStreamer
+The model no longer lives in this process. Ollama owns the GPU and serves the
+(quantized) model once; every backend instance is a thin HTTP client, so prod
+and dev can share a single model copy concurrently instead of each trying to
+load ~14 GB of weights into a 16 GB card.
+
+The public surface is intentionally unchanged so callers in rag.py / handler.py
+/ main.py need no edits:
+
+    engine = get_llm_engine()
+    text   = engine.prompt(prompt, temperature=...)               # -> str
+    stream = engine.prompt(prompt, stream=True, temperature=...)  # -> Iterator[str]
+    engine._load_model(...)   # warmup: loads the model into VRAM
+    engine.cleanup()          # no-op, kept for compatibility
+"""
+import json
+from typing import Iterator, Union
+
+import requests
+
+from . import config
 
 _LLM_ENGINE_INSTANCE = None
+
 
 def get_llm_engine():
     global _LLM_ENGINE_INSTANCE
@@ -17,98 +30,98 @@ def get_llm_engine():
         _LLM_ENGINE_INSTANCE = LLMEngine()
     return _LLM_ENGINE_INSTANCE
 
+
 class LLMEngine:
     def __init__(self):
-        self.token = config.MODEL_TOKEN
-        self._model = None
-        self._tokenizer = None
-        self._gpu_lock = threading.Lock()
-        self._request_queue = Queue(maxsize=15)
+        self.host = config.OLLAMA_HOST.rstrip("/")
+        self.model = config.OLLAMA_MODEL
+        self.num_ctx = config.OLLAMA_NUM_CTX
+        # Keep the model resident in VRAM instead of letting Ollama unload it
+        # after its default idle timeout.
+        self.keep_alive = config.OLLAMA_KEEP_ALIVE
+        self._generate_url = f"{self.host}/api/generate"
 
-    def _load_model(self, model_name: str):
-        """
-        Loads and caches model and tokenizer
-        """
-        if self._model is None or self._tokenizer is None:
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name, token=self.token, padding_side="left")
-            if self._tokenizer.pad_token is None:
-                self._tokenizer.pad_token = self._tokenizer.eos_token
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            self._model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                token=self.token,
-                low_cpu_mem_usage=True,
-                device_map={"": device},
-                dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                use_cache=True,
-                trust_remote_code=True,
-                attn_implementation="sdpa"
+    def _payload(self, prompt: str, max_new_tokens: int, temperature: float, stream: bool) -> dict:
+        return {
+            "model": self.model,
+            "prompt": prompt,
+            # raw=True sends the prompt verbatim (no chat template applied) and
+            # returns only the completion. This matches the previous transformers
+            # behavior, where we tokenized the raw prompt string and stripped the
+            # echoed prompt off the front of the output.
+            "raw": True,
+            "stream": stream,
+            "keep_alive": self.keep_alive,
+            "options": {
+                "temperature": temperature,
+                "top_p": 0.85,
+                "num_predict": max_new_tokens,
+                "num_ctx": self.num_ctx,
+            },
+        }
+
+    def _load_model(self, model_name: str = None):
+        """Warm the configured model into VRAM so the first real request isn't
+        slow. model_name is accepted for call-site compatibility; the served
+        model is set via OLLAMA_MODEL."""
+        try:
+            resp = requests.post(
+                self._generate_url,
+                json={"model": self.model, "keep_alive": self.keep_alive},
+                timeout=600,
             )
-        return self._model, self._tokenizer
-    
+            resp.raise_for_status()
+            print(f"[LLMEngine] Loaded '{self.model}' on {self.host}")
+        except requests.RequestException as e:
+            print(
+                f"[LLMEngine] Could not load '{self.model}' at {self.host}: {e}\n"
+                f"            Is Ollama running, and has the model been pulled? "
+                f"(ollama pull {self.model})"
+            )
+
     def cleanup(self):
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    
-    def prompt(self, prompt: str, max_new_tokens: int = 512, temperature: float = 0.2, stream: bool = False) -> TextIteratorStreamer | str:
-        """
-        Prompts cached model and returns output with optional streaming bool
-        """
-        with self._gpu_lock:
-            try:
-                model, tokenizer = self._load_model(ModelConfig.MODEL)
-                device = next(model.parameters()).device
+        """No local GPU state to free; kept for interface compatibility."""
+        pass
 
-                with torch.no_grad():
-                    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
-                    input_ids = inputs.input_ids.to(device, non_blocking=True)
-                    attention_mask = inputs.attention_mask.to(device, non_blocking=True)
-                token = tokenizer.eos_token_id
+    def prompt(
+        self,
+        prompt: str,
+        max_new_tokens: int = 512,
+        temperature: float = 0.2,
+        stream: bool = False,
+    ) -> Union[str, Iterator[str]]:
+        """Prompt the shared model. Returns a string, or an iterator of token
+        strings when stream=True."""
+        payload = self._payload(prompt, max_new_tokens, temperature, stream)
+        if stream:
+            return self._stream(payload)
+        return self._complete(payload)
 
-                generation_kwargs = dict(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=max_new_tokens,
-                    temperature=temperature,
-                    do_sample=True,
-                    top_p=0.85,
-                    eos_token_id=token,
-                    pad_token_id=token
-                )
-                if stream:
-                    streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-                    generation_kwargs["streamer"] = streamer
+    def _complete(self, payload: dict) -> str:
+        try:
+            resp = requests.post(self._generate_url, json=payload, timeout=600)
+            resp.raise_for_status()
+            return resp.json().get("response", "").strip()
+        except requests.RequestException as e:
+            print(f"[LLMEngine] Generation request failed: {e}")
+            raise
 
-                    def generate_sync():
-                        try:
-                            with torch.no_grad():
-                                outputs = model.generate(**generation_kwargs)
-                        except Exception as e:
-                            print(f"Error occurred during generation: {e}")
-                        finally:
-                            if 'input_ids' in locals():
-                                del input_ids
-                            if 'attention_mask' in locals():
-                                del attention_mask
-                            self.cleanup()
-                    thread = threading.Thread(target=generate_sync)
-                    thread.daemon = True
-                    thread.start()
-                    return streamer
-                else:
-                    outputs = model.generate(**generation_kwargs)
-                    if hasattr(outputs, 'sequences'):
-                        generated_ids = outputs.sequences[0]
-                    else:
-                        generated_ids = outputs[0]
-
-                    decoded = tokenizer.decode(generated_ids, skip_special_tokens=True)
-                    result =  decoded[len(prompt):].strip()
-
-                    del input_ids, attention_mask, outputs, generated_ids
-                    return result
-            except Exception as e:
-                raise
-            finally:
-                self.cleanup()
+    def _stream(self, payload: dict) -> Iterator[str]:
+        try:
+            with requests.post(self._generate_url, json=payload, stream=True, timeout=600) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    chunk = obj.get("response", "")
+                    if chunk:
+                        yield chunk
+                    if obj.get("done"):
+                        break
+        except requests.RequestException as e:
+            print(f"[LLMEngine] Streaming request failed: {e}")
+            raise

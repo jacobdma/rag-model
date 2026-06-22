@@ -1,0 +1,52 @@
+# Prod stack (run as the "rag-prod" project).
+#
+# MongoDB and Ollama stay on the HOST; these are CPU-only client containers.
+# Dev keeps running natively on 8001/3001 against the same host Ollama + Mongo,
+# so prod (here) and dev coexist with one shared model copy on the GPU.
+#
+#   Bring up:   docker compose -p rag-prod up -d --build
+#   Logs:       docker compose -p rag-prod logs -f
+#   Tear down:  docker compose -p rag-prod down
+#
+# HOST PREREQS (so containers can reach host services):
+#   - Ollama must listen on all interfaces:  set env OLLAMA_HOST=0.0.0.0 for the
+#     Ollama service (default 127.0.0.1 is NOT reachable from containers).
+#   - mongod must bind beyond localhost:     run with --bind_ip_all (or 0.0.0.0).
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: rag-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - MONGO_URI=mongodb://host.docker.internal:27017
+      - EMBED_DEVICE=cpu
+    volumes:
+      # Secrets + per-deploy data, supplied at runtime (not baked into image)
+      - ./backend/config.yaml:/app/config.yaml:ro
+      - ./backend/indexes:/app/indexes
+      - ./backend/sourceless_indexes:/app/sourceless_indexes
+      - ./backend/cache:/app/cache
+      - ./backend/sourceless_cache:/app/sourceless_cache
+      - ./backend/downloaded_files:/app/downloaded_files
+      - ./backend/logs:/app/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Server IP the browser will hit; override via HOST_IP env for LAN.
+        NEXT_PUBLIC_HOST_IP: ${HOST_IP:-localhost}
+        NEXT_PUBLIC_BACKEND_PORT: "8000"
+    image: rag-frontend:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

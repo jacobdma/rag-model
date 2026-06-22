@@ -13,6 +13,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 
 # Local imports
+from . import config
 from .chunk_documents import DocumentChunker
 from .hybrid_retriever import HybridRetriever
 from .load_utils import CACHE_DIR
@@ -89,7 +90,7 @@ class RetrieverBuilder:
         """Load or build BM25 and FAISS retrievers, caching FAISS in memory. Returns chunk dict as dict[source] = [docs]."""
         embeddings = HuggingFaceEmbeddings(
             model_name="BAAI/bge-large-en-v1.5",
-            model_kwargs={'device': 'cuda'}
+            model_kwargs={'device': config.EMBED_DEVICE}
         )
 
         # Build missing retrievers

@@ -1,245 +1,163 @@
 # IHI Assistant
 
-## Table of Contents
-* [Introduction](#introduction)
-* [Features](#features)
-* [Technologies](#technologies)
-* [Getting started](#getting-started)
-* [Configuration](#configuration)
-* [Project Structure](#project-structure)
-* [License Copies](#license-copies)
-* [Disclaimer](#disclaimer)
-* [Author](#author)
-
-## Introduction
-
-The IHI Assistant is a Retrieval-Augmented Generation (RAG) AI application for internal use. It uses both local document search and optional web augmentation to generate precise context-aware answers.
-
----
+Internal RAG assistant: hybrid local document search (BM25 + FAISS) with optional web augmentation. LLM served by a shared Ollama instance; FastAPI backend, Next.js frontend, MongoDB.
 
 ## Features
 
-- Ingests documents from shared drives (`PDF`, `DOCX`, `PPTX`, `TXT`, `CSV`)
-- Hybrid retrieval using **BM25 + FAISS** with small and large chunking strategies
-- Frontend configuration for model, temperature, tone, reranking
-- Optional web search via Bing-compatible API
-- Local inference using `mistralai/Mistral-7B-Instruct-v0.1`
-- Frontend built with **Next.js**, **Tailwind CSS**, and **Lucide Icons**
+- Ingests `PDF`, `DOCX`, `PPTX`, `TXT`, `CSV` from shared drives
+- Hybrid retrieval: BM25 + FAISS, small/large chunking
+- LLM via shared Ollama (quantized Mistral-7B default) — prod and dev share one GPU model copy
+- Live model/temperature/tone config from the frontend
+- Optional Bing-compatible web search
 
----
+## Stack
 
-## Technologies
+- **Backend:** FastAPI, Uvicorn, LangChain, FAISS, rank-bm25, sentence-transformers (bge embeddings)
+- **LLM:** Ollama
+- **Frontend:** Next.js, Tailwind CSS, lucide-react
+- **Data:** MongoDB
 
-### Backend
+## Prerequisites
 
-- Core: `fastapi`, `uvicorn`, `pydantic`, `pydantic-settings`
-- RAG stack: `langchain`, `langchain-core`, `langchain-community`, `langchain-huggingface`, `langchain-text-splitters`
-- Transformers + embeddings: `transformers`, `torch`, `sentence-transformers`, `faiss-cpu`, `rank-bm25`
-- Parsing: `pdfplumber`, `pypdf`, `docx2txt`, `python-pptx`, `pandas`, `pillow`
-- Utilities: `tqdm`, `requests`, `psutil`, `PyYAML`, `python-dotenv`, `regex`, `scikit-learn`, `scipy`, `sentence-transformers`, `threadpoolctl`
+- **Python 3.11**
+- **Ollama** — serves the LLM (backend is an HTTP client, no in-process model). Install from https://ollama.com/download, then:
+  ```
+  ollama pull mistral:7b-instruct-q5_K_M
+  ```
+  Runs on `localhost:11434`. Override with `ollama_model` in config.yaml or `OLLAMA_MODEL`.
+- **MongoDB** — local, default `mongodb://localhost:27017` (`start-dev.bat` launches one if not already running).
 
-### Frontend
+## Run — Native (dev)
 
-- `next`, `react`, `tailwindcss`
-- `lucide-react` (icon set)
-- Google Fonts: `Geist`, `Geist Mono`
-
----
-
-## Getting Started
-
-Note: This project is not hosted online. It is intended for local deployment on internal servers only.
-
-### 1. Backend
-
-_Requires Python 3.11_
-
+Backend:
 ```
-# Navigate to the project directory
 cd rag_model
-
-# Set up virtual environment
 python -m venv env
 env\Scripts\activate.ps1
-
-# Navigate to the backend directory
 cd backend
-
-# Upgrade pip
 python -m pip install --upgrade pip
-
-# Install dependencies
 python -m pip install -r requirements.txt
-
-# Start the FastAPI server for local use
-uvicorn scripts.main:app
-
-# Start the FastAPI server for development
-uvicorn scripts.main:app --reload
-
-# Start the FastAPI server for LAN hosting
-uvicorn scripts.main:app --host 0.0.0.0 --port 8000
-
-# Access backend at localhost:8000/docs
+uvicorn scripts.main:app --host 0.0.0.0 --port 8000    # add --reload for dev
 ```
-
-### 2. Frontend
+Frontend:
 ```
-# Navigate to frontend directory
-
 cd rag_model/frontend
 npm install
-npm run dev
-
-# Access the app at localhost:3000
-
+npm run dev        # localhost:3000
+```
+Or just (from `rag_model/`):
+```
+start-dev.bat      # native dev stack on 8001/3001 (current branch), reload on
 ```
 
-### NOTE
+## Run — Docker (prod)
 
-The app also contains ```start.bat```, ```frontend.bat```, and ```backend.bat``` files for development convenience. These can be run simply:
+CPU-only containers built from `main` (LLM in host Ollama, embeddings on CPU — no GPU in the images). Prod and a native dev instance can run at once, sharing the host Ollama + MongoDB. Prod code is baked into the image, so branch-switching can't disturb it.
+
+Host prerequisites (so containers can reach host services):
+- Ollama: set `OLLAMA_HOST=0.0.0.0`.
+- MongoDB: run `mongod --bind_ip_all`.
+
+Deploy from main (guards a dirty tree, pulls, rebuilds, returns to your branch):
 ```
-# Navigate to project directory
-cd rag_model
-
-# Example usage (start.bat will run both front- and backend)
-start.bat
-
+deploy.bat
+```
+Restart the last-built stack after a crash/reboot (no rebuild, no checkout):
+```
+start-prod.bat
+```
+Or Compose directly (repo root):
+```
+docker compose -p rag-prod up -d --build     # frontend :3000, backend :8000
+docker compose -p rag-prod logs -f
+docker compose -p rag-prod down
+```
+LAN access (bakes server IP into the frontend at build):
+```
+set HOST_IP=192.168.x.x
+docker compose -p rag-prod up -d --build
 ```
 
 ## Configuration
 
-The assistant supports real-time adjustment of LLM parameters via the floating SettingsMenu:
-- Model: Switch between supported Hugging Face models
-- Temperature: Control generation creativity
-- Tone: Choose between formal, neutral, casual
-These are sent via `POST /set-config` to the FastAPI backend.
+### backend/config.yaml
 
-## Project Structure
+| Key | Req | Description |
+|-----|-----|-------------|
+| `DOCUMENTS` | rec | Paths the pipeline can read |
+| `MODEL_TOKEN` | yes | HuggingFace token (embedding downloads) |
+| `mongo_uri` | yes | MongoDB URI |
+| `ldap` | yes* | LDAP auth: `server`, `user`, `password`, `search_filter`, `base_dn` |
+| `sharepoint` | yes* | On-prem SharePoint: `domain`, `user`, `password` |
+| `BING_API_KEY` | opt | Bing-compatible search key |
+| `IGNORE_FOLDERS` | opt | Paths under `DOCUMENTS` to skip |
+| `IGNORE_KEYWORDS` | opt | Skip paths/files containing these |
+| `ollama_host` | opt | Ollama URL (default `http://localhost:11434`) |
+| `ollama_model` | opt | Model tag (default `mistral:7b-instruct-q5_K_M`) |
+| `embed_device` | opt | bge device: `cpu` (default) or `cuda` (faster index builds) |
 
-```
-/backend
-├── scripts/
-│   ├── chunk_documents.py          # Document chunking and processing
-│   ├── config.py                   # Prompt templates & constants
-│   ├── file_readers.py             # File reading functions
-│   ├── handler.py                  # Routes queries by intent (math, code, general inquiry, etc)
-│   ├── hybrid_retrievers.py        # Retrieves content based on hybrid retriever
-│   ├── llm_utils.py                # Model loading and prompt handling
-│   ├── load_utils.py               # Network share and document ingestion
-│   ├── main.py                     # FastAPI app
-│   ├── rag.py                      # Main pipeline logic
-│   ├── retriever_builder.py        # Constructs and stores retrievers with persistance
-│   └── utils.py                    # Models
+\* Will be made optional. Env overrides (used by Docker): `OLLAMA_HOST`, `OLLAMA_MODEL`, `EMBED_DEVICE`, `MONGO_URI`.
 
-/frontend
-├── app/
-│   ├── layout.tsx              # Global layout
-│   ├── page.tsx                # Main chat page
-│   ├──components/
-│   │   ├── chat.tsx                # Message list + chat input
-│   │   ├── ContextWindow.tsx       # Displays retrieved content
-│   │   ├── DocumentUpload.tsx      # Document uploading window
-│   │   ├── Dropdown.tsx            # Selection dropdown menu
-│   │   ├── LoginForm.tsx           # Login form for LDAP authentication
-│   │   ├── SettingsMenu.tsx        # Model configuration menu
-│   │   ├── Sidebar.tsx             # Chat list + new chat
-│   │   ├── Slider.tsx              # Sidebar slider component
-│   │   └── Toggle.tsx              # Sidebar option toggle component
-
-
-```
-
-## Development Configuration
-
-### config.yaml
-
-Create file "config.yaml" inside of backend/
-
-**DOCUMENTS** (recommended) will be all files the RAG Pipeline will have access to.
-
-**BING_API_KEY** (optional) is the user or organization API Key for the Bing search API.
-
-**MODEL_TOKEN** (required) is the user or organization HuggingFace token which enables model usage.
-
-**IGNORE_FOLDERS** (optional) will be ignored paths inside of DOCUMENTS that the RAG Pipeline will not have access to.
-
-**IGNORE_KEYWORDS** (optional) are a list of keywords that will be ignored if contained in the path or filename.
-
-**ldap** (required, but will be made optional) is the LDAP configuration for your organization.
-NOTE: **ldap** contains **server**, **user**, **password**, **search_filter**, and **base_dn** parameters. 
-| Parameter      | Description                                      |
-|----------------|--------------------------------------------------|
-| server         | LDAP server hostname or URI (e.g. ldap://host)    |
-| user           | DN or user principal for bind (cn=John,... )      |
-| password       | Bind password                                     |
-| search_filter  | RFC 4515 filter for selecting entries             |
-| base_dn        | Starting DN for search (e.g. dc=example,dc=com)   |
-
-Consult LDAP documentation for more information: https://ldap3.readthedocs.io/en/latest/
-
-**mongo_uri** (required) is the mongo port for database access
-
-**sharepoint** (required, but will be made optional) is the on-prem SharePoint credentials for organization file access.
-NOTE: **sharepoint** contains **domain**, **user**, and **password** parameters.
-
-#### config.yaml example:
-```
+Example:
+```yaml
 DOCUMENTS:
   - /Users/User/SampleDocuments/
-
-BING_API_KEY: None
-
 MODEL_TOKEN: my_model_token
-
+mongo_uri: mongodb://localhost:27017
+ollama_model: mistral:7b-instruct-q5_K_M
+embed_device: cpu
+BING_API_KEY: None
 IGNORE_FOLDERS:
   - /Users/User/SkippedDocuments/
-
 IGNORE_KEYWORDS:
   - skip
   - archive
-
 ldap:
   server: "my_ldap_server"
   user: "my_ldap_user"
   password: "password"
   search_filter: "my_ldap_filter"
   base_dn: "my_ldap_base_dn"
-
-mongo_uri: mongodb://localhost:12345
-
 sharepoint:
   domain: "sp_domain"
   user: "sp_user"
   password: "password"
-
 ```
 
-### .env
-
-Create file .env in frontend/
-
-**NEXT_PUBLIC_HOST_IP** (required) is the IP of the hosting server.
-
-This will look like:
+### frontend/.env (native only; Docker uses build args)
 ```
-NEXT_PUBLIC_HOST_IP: my_host_ip
+NEXT_PUBLIC_HOST_IP=my_host_ip
+NEXT_PUBLIC_BACKEND_PORT=8000
 NEXT_PUBLIC_DOMAIN=my_email_domain
 NEXT_PUBLIC_SERVER=my_email_server
 ```
 
-## License Copies
+## Project Structure
 
-A consolidated list of licenses for third-party libraries is provided in `NOTICE.txt`.
+```
+backend/scripts/
+  chunk_documents.py     Document chunking
+  config.py              Prompt templates, constants, ollama/env config
+  file_readers.py        File parsing
+  handler.py             Intent routing (math, code, general, ...)
+  hybrid_retriever.py    BM25 + FAISS retrieval
+  llm_utils.py           Ollama client
+  load_utils.py          Share / document ingestion
+  main.py                FastAPI app
+  rag.py                 Pipeline
+  retriever_builder.py   Builds / persists retrievers
+  utils.py               Models
 
-> You must preserve these notices and licenses if redistributing this project or using it in a commercial product.
+frontend/app/
+  layout.tsx, page.tsx
+  components/   chat, ContextWindow, DocumentUpload, Dropdown,
+               LoginForm, SettingsMenu, Sidebar, Slider, Toggle
+```
 
+## License & Disclaimer
 
-## Disclaimer
-This software is provided "as-is" and intended for internal use only. External distribution or commercial deployment requires verification of all third-party licensing terms.
+Third-party licenses in `NOTICE.txt` — preserve if redistributing. Provided "as-is" for internal use only; external or commercial deployment requires verifying all third-party license terms.
 
 ## Author
 
-Developed by Jacob Ma
-SWE/ML Intern @ IHI, Summer 2025
-Contact: jma443@gatech.edu
+Jacob Ma — SWE Intern @ IHI, Summer 2025 — jma443@gatech.edu
