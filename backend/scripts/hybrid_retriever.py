@@ -43,8 +43,6 @@ class HybridRetriever:
                 if content not in seen_content:
                     seen_content.add(content)
                     docs.append(doc)
-                
-            docs = self._filter_by_relevance(query, docs)
 
         except Exception as e:
             print(f"[Retrieval] Query failed: {e}")
@@ -52,7 +50,7 @@ class HybridRetriever:
 
         return docs[:max_results]
     
-    def get_relevant_documents(self, query: str, k: int = 4) -> list[Document]:
+    def get_relevant_documents(self, query: str, k: int = 12) -> list[Document]:
         bm25_docs = self.bm25.invoke(query)
         faiss_docs = self.faiss_retriever.invoke(query)
 

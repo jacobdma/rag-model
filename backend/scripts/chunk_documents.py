@@ -63,8 +63,8 @@ class DocumentChunker:
         return cleaned_chunks
     
     # Runs document chunking in parallel for faster processing
-    def get_chunks(self, chunk_size: int, chunk_overlap: int):
-        cache_path = CACHE_DIR / f"chunked_docs.json"
+    def get_chunks(self, chunk_size: int, chunk_overlap: int, tag: str = ""):
+        cache_path = CACHE_DIR / f"chunked_docs{tag}.json"
         parsed_cache_path = CACHE_DIR / "parsed_text_docs.json"
 
         # 1. Try to load chunked docs from cache

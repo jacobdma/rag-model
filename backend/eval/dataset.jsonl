@@ -40,3 +40,15 @@
 {"id": "ihi-028", "added_in": "v1", "category": "conduct", "question": "What items are prohibited from employee lockers?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["gun", "knife", "weapon"]}
 {"id": "ihi-029", "added_in": "v1", "category": "driver", "question": "What must an employee have to drive on company business?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["license", "insurance"]}
 {"id": "ihi-030", "added_in": "v1", "category": "leave", "question": "How long can an absence be extended before it must be converted to personal or medical leave?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["two weeks"]}
+# --- v2: technical / spec docs (IT, safety procedures, engineering) ---
+{"id": "cms-1", "added_in": "v2", "category": "it", "question": "What is the minimum RAM for an Engineering Desktop?", "expected_source": "Computer-Minimum-Specifications", "expected_facts": ["64"]}
+{"id": "cms-2", "added_in": "v2", "category": "it", "question": "What type of SSD must all newly purchased computers use, except servers and NAS?", "expected_source": "Computer-Minimum-Specifications", "expected_facts": ["nvme"]}
+{"id": "cms-3", "added_in": "v2", "category": "it", "question": "What is the minimum processor for a standard floor laptop?", "expected_source": "Computer-Minimum-Specifications", "expected_facts": ["i7"]}
+{"id": "cms-4", "added_in": "v2", "category": "it", "question": "What is the minimum screen size for a standard monitor?", "expected_source": "Computer-Minimum-Specifications", "expected_facts": ["23"]}
+{"id": "fak-1", "added_in": "v2", "category": "safety", "question": "What is the minimum number of adhesive bandages required in a first aid kit?", "expected_source": "First Aid Kit Stock List", "expected_facts": ["75"]}
+{"id": "fak-2", "added_in": "v2", "category": "safety", "question": "How often must the first aid cabinets be checked?", "expected_source": "First Aid Kit Stock List", "expected_facts": ["month"]}
+{"id": "fak-3", "added_in": "v2", "category": "safety", "question": "How many pairs of nitrile gloves should a first aid kit contain?", "expected_source": "First Aid Kit Stock List", "expected_facts": ["4"]}
+{"id": "loto-1", "added_in": "v2", "category": "safety", "question": "What categories of hazardous energy sources are covered by lockout-tagout?", "expected_source": "Lockout-Tagout", "expected_facts": ["mechanical", "hydraulic"]}
+{"id": "loto-2", "added_in": "v2", "category": "safety", "question": "Which agency requires a lockout-tagout program?", "expected_source": "Lockout-Tagout", "expected_facts": ["osha"]}
+{"id": "pnp-1", "added_in": "v2", "category": "engineering", "question": "What is the part number format used for screws?", "expected_source": "Part Number Policies", "expected_facts": ["xxxxyyyy"]}
+{"id": "pnp-2", "added_in": "v2", "category": "engineering", "question": "What format is used for extrusion part numbers?", "expected_source": "Part Number Policies", "expected_facts": ["npn"]}

@@ -56,11 +56,11 @@ def git_rev() -> str:
         return "unknown"
 
 
-def build_retriever():
+def build_retriever(tag: str = ""):
     with open("config.yaml", "r") as f:
         doc_cfg = yaml.safe_load(f)
     from scripts.retriever_builder import RetrieverBuilder
-    builder = RetrieverBuilder(doc_cfg["DOCUMENTS"])
+    builder = RetrieverBuilder(doc_cfg["DOCUMENTS"], tag=tag)
     retriever, _chunk_dict = builder.build_retrievers()
     return retriever
 
@@ -78,6 +78,8 @@ def main():
                     help="Generate answers and score fact coverage (requires Ollama).")
     ap.add_argument("--show-misses", action="store_true",
                     help="Print questions whose retrieval missed the expected source.")
+    ap.add_argument("--index-tag", default="",
+                    help="Index variant to evaluate, e.g. _test (default: prod index).")
     args = ap.parse_args()
 
     items = load_dataset(args.max_version)
@@ -85,8 +87,9 @@ def main():
         print("No questions matched. Check --max-version.")
         return
     version_label = args.max_version or "all"
-    print(f"Loaded {len(items)} questions (version: {version_label}). Building retriever...")
-    retriever = build_retriever()
+    index_label = args.index_tag or "prod"
+    print(f"Loaded {len(items)} questions (version: {version_label}, index: {index_label}). Building retriever...")
+    retriever = build_retriever(args.index_tag)
 
     engine = None
     cfg = None
@@ -145,6 +148,7 @@ def main():
         "timestamp": _dt.datetime.now().isoformat(timespec="seconds"),
         "git_rev": git_rev(),
         "eval_version": version_label,
+        "index": index_label,
         "k": args.k,
         "questions": n,
         "retrieval_hit_rate": round(hit_rate, 4),
