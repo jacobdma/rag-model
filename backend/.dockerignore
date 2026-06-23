@@ -5,6 +5,7 @@ __pycache__/
 
 # Secrets + per-deploy data — mounted as volumes at runtime instead
 config.yaml
+eval/
 indexes/
 sourceless_indexes/
 cache/

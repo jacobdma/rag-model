@@ -1,0 +1,42 @@
+# IHI RAG eval set. Append-only. Each question is IMMUTABLE once added.
+# To grow the set, add new lines tagged with the next version (added_in: "v2", ...).
+# Never edit or remove an existing question -- that breaks score comparability.
+# Lines starting with # are ignored. expected_source = substring match on the
+# retrieved doc path; expected_facts = distinctive tokens expected in a correct answer.
+# --- v1: IHI Handbook (safety) ---
+{"id": "ihi-001", "added_in": "v1", "category": "safety", "question": "What kind of shoes are required to work in the shop area?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["oil", "resistant"]}
+{"id": "ihi-002", "added_in": "v1", "category": "safety", "question": "Are open-toed shoes or sandals allowed in the manufacturing areas?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["not allowed", "open-toed"]}
+{"id": "ihi-003", "added_in": "v1", "category": "safety", "question": "How often does IHI subsidize prescription safety glasses?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["2 years"]}
+{"id": "ihi-004", "added_in": "v1", "category": "safety", "question": "Can machinery be operated if a safety guard has been removed?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["termination", "without pay"]}
+{"id": "ihi-005", "added_in": "v1", "category": "safety", "question": "What is the penalty for tampering with a compressed air tank's safety relief valve?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["immediate termination", "prosecution"]}
+{"id": "ihi-006", "added_in": "v1", "category": "safety", "question": "What are the rules for working alone in a building?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["two-way radio", "machinery"]}
+{"id": "ihi-007", "added_in": "v1", "category": "safety", "question": "What must be done with long hair when operating machinery?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["tied back"]}
+# --- v1: IHI Handbook (hours & injury) ---
+{"id": "ihi-008", "added_in": "v1", "category": "hours", "question": "What is the maximum number of hours an employee may work in a single day?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["14"]}
+{"id": "ihi-009", "added_in": "v1", "category": "injury", "question": "Who do you report a job-related injury to?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["supervisor", "immediately"]}
+{"id": "ihi-010", "added_in": "v1", "category": "injury", "question": "If you are injured off the clock in a way that could affect your job, how soon must you report it?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["36 hours", "writing"]}
+{"id": "ihi-011", "added_in": "v1", "category": "injury", "question": "After being absent three or more days for illness, what may be required before returning to work?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["physician", "release"]}
+# --- v1: IHI Handbook (drug & alcohol, emergencies) ---
+{"id": "ihi-012", "added_in": "v1", "category": "drug_alcohol", "question": "What happens if an employee refuses or fails to show up for a drug or alcohol test?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["termination", "6 months"]}
+{"id": "ihi-013", "added_in": "v1", "category": "drug_alcohol", "question": "Under what circumstances does IHI conduct drug and alcohol testing?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["random", "post-accident"]}
+{"id": "ihi-014", "added_in": "v1", "category": "emergency", "question": "When should you call 911 at the plant?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["life-threatening"]}
+# --- v1: IHI Handbook (attendance) ---
+{"id": "ihi-015", "added_in": "v1", "category": "attendance", "question": "What is the correct procedure for calling in an absence?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["before", "shift"]}
+{"id": "ihi-016", "added_in": "v1", "category": "attendance", "question": "How many attendance points are allowed in a calendar month?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["five"]}
+{"id": "ihi-017", "added_in": "v1", "category": "attendance", "question": "When is an absence treated as an automatic voluntary quit?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["three", "two hours"]}
+{"id": "ihi-018", "added_in": "v1", "category": "attendance", "question": "How much notice must a salaried worker give for a vacation longer than one day?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["week"]}
+# --- v1: IHI Handbook (PTO & vacation) ---
+{"id": "ihi-019", "added_in": "v1", "category": "pto", "question": "Who is eligible to earn paid vacation at IHI?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["full-time", "30"]}
+{"id": "ihi-020", "added_in": "v1", "category": "pto", "question": "How many vacation days do you earn per year after 9 but before 14 years of employment?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["15 days"]}
+{"id": "ihi-021", "added_in": "v1", "category": "pto", "question": "How many vacation days do you earn with less than one year of employment?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["5 days"]}
+{"id": "ihi-022", "added_in": "v1", "category": "pto", "question": "What is the maximum yearly vacation accrual, and at how many years of service?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["20 days", "29"]}
+{"id": "ihi-023", "added_in": "v1", "category": "pto", "question": "How many paid personal days can you earn under the Perfect Attendance Program?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["three"]}
+{"id": "ihi-024", "added_in": "v1", "category": "pto", "question": "In what increments can vacation time be taken?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["half", "1-day"]}
+# --- v1: IHI Handbook (overtime) ---
+{"id": "ihi-025", "added_in": "v1", "category": "overtime", "question": "What is the overtime pay rate and the weekly threshold for it?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["one-half", "40"]}
+{"id": "ihi-026", "added_in": "v1", "category": "overtime", "question": "Do holiday hours count toward the 40 hours for overtime?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["counted", "holiday"]}
+# --- v1: IHI Handbook (conduct, driver, leave) ---
+{"id": "ihi-027", "added_in": "v1", "category": "conduct", "question": "What is the dress code for office staff?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["business casual"]}
+{"id": "ihi-028", "added_in": "v1", "category": "conduct", "question": "What items are prohibited from employee lockers?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["gun", "knife", "weapon"]}
+{"id": "ihi-029", "added_in": "v1", "category": "driver", "question": "What must an employee have to drive on company business?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["license", "insurance"]}
+{"id": "ihi-030", "added_in": "v1", "category": "leave", "question": "How long can an absence be extended before it must be converted to personal or medical leave?", "expected_source": "IHI-Handbook.pdf", "expected_facts": ["two weeks"]}
