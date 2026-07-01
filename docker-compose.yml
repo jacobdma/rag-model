@@ -13,6 +13,8 @@
 #     Ollama service (default 127.0.0.1 is NOT reachable from containers).
 #   - mongod must bind beyond localhost:     run with --bind_ip_all (or 0.0.0.0).
 
+name: rag-prod
+
 services:
   backend:
     build:

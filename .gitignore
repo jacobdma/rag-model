@@ -65,5 +65,4 @@ frontend/out
 frontend/build
 frontend/src/
 
-# project memory (local only)
 CLAUDE.md
