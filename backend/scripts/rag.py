@@ -201,7 +201,7 @@ class RAGPipeline:
                 
                 # Combine context with length limit
                 combined_content = ''.join([c.page_content for c in context_chunks])
-                context_list.append(combined_content[:1000])  # Truncate combined content
+                context_list.append(combined_content[:1500])  # Truncate combined content
 
             context = '\n\n'.join(context_list)
             yield retrieved_info

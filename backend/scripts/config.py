@@ -18,7 +18,7 @@ BING_API_KEY, MODEL_TOKEN = config["BING_API_KEY"], config["MODEL_TOKEN"]
 # otherwise falls back to config.yaml, then a sane default.
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", config.get("ollama_host", "http://localhost:11434"))
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", config.get("ollama_model", "mistral:7b-instruct-q5_K_M"))
-OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", config.get("ollama_num_ctx", 4096)))
+OLLAMA_NUM_CTX = int(os.environ.get("OLLAMA_NUM_CTX", config.get("ollama_num_ctx", 8192)))
 OLLAMA_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", config.get("ollama_keep_alive", -1))
 
 # Device for the bge embedding model. Default cpu so serving leaves the GPU

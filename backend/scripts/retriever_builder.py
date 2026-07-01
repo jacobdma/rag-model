@@ -22,13 +22,16 @@ class RetrieverBuilder:
     CHUNK_SIZE = 1024
     CHUNK_OVERLAP = 100
 
-    def __init__(self, folder_paths: list[str]):
+    def __init__(self, folder_paths: list[str], chunk_size: int = None, chunk_overlap: int = None, tag: str = ""):
         self.folder_paths = folder_paths
+        self.chunk_size = chunk_size if chunk_size is not None else self.CHUNK_SIZE
+        self.chunk_overlap = chunk_overlap if chunk_overlap is not None else self.CHUNK_OVERLAP
+        self.tag = tag
         self.index_dir = os.path.join(os.path.dirname(__file__), "..", "indexes")
         os.makedirs(self.index_dir, exist_ok=True)
 
-        self.bm25_path = os.path.join(self.index_dir, f"bm25.dill")
-        self.faiss_path = os.path.join(self.index_dir, f"faiss.dill")
+        self.bm25_path = os.path.join(self.index_dir, f"bm25{tag}.dill")
+        self.faiss_path = os.path.join(self.index_dir, f"faiss{tag}.dill")
         self.chunker = DocumentChunker(self.folder_paths)
 
     def build_faiss(self, docs, embeddings):
@@ -36,7 +39,7 @@ class RetrieverBuilder:
         model = embeddings._client
         if not os.path.exists(self.faiss_path):
             try:
-                cache_path = CACHE_DIR / f"faiss_embeddings.pkl"
+                cache_path = CACHE_DIR / f"faiss_embeddings{self.tag}.pkl"
                 
                 if cache_path.exists():
                     print("[FAISS] Loading cached embeddings...")
@@ -94,7 +97,7 @@ class RetrieverBuilder:
         )
 
         # Build missing retrievers
-        chunks_by_source = self.chunker.get_chunks(self.CHUNK_SIZE, self.CHUNK_OVERLAP)
+        chunks_by_source = self.chunker.get_chunks(self.chunk_size, self.chunk_overlap, tag=self.tag)
         docs = [doc for doc_list in chunks_by_source.values() for doc in doc_list]
 
         if not os.path.exists(self.bm25_path):
