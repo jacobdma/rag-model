@@ -144,6 +144,13 @@ class EmailSyncResponse(BaseModel):
     emails_synced: int
     total_emails: int
 
+class EmailSearchRequest(BaseModel):
+    username: str
+    password: str
+    email_address: str
+    server: str
+    query: str
+
 def get_last_sync_date(existing_emails: dict) -> datetime | None:
     if not existing_emails:
         return None
@@ -523,8 +530,8 @@ async def get_user_emails(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load emails: {str(e)}")
     
-@app.get("/emails/{query}")
-async def search_user_emails(request: EmailSyncRequest, query: str):
+@app.post("/emails/search")
+async def search_user_emails(request: EmailSearchRequest):
     try:
         credentials = Credentials(username=request.username, password=request.password)
         exchange_config = ExchangeConfig(
@@ -537,12 +544,25 @@ async def search_user_emails(request: EmailSyncRequest, query: str):
             autodiscover=False,
             access_type=DELEGATE
         )
-        emails = []
-        emails.append(account.inbox.filter(subject__contains=query))
-        # add support for body filtering later
 
-        
+        results = account.inbox.filter(subject__contains=request.query)
+
+        emails = []
+        for item in results:
+            emails.append({
+                "id": str(item.message_id) if hasattr(item, 'message_id') and item.message_id else f"{item.subject}_{item.datetime_received.isoformat()}",
+                "subject": str(item.subject) if item.subject else "No Subject",
+                "sender": str(item.sender) if item.sender else "Unknown",
+                "datetime_received": item.datetime_received.isoformat() if item.datetime_received else None,
+                "body": str(item.text_body) if item.text_body else (str(item.body) if item.body else ""),
+            })
+
+        return {
+            "status": "success",
+            "total_emails": len(emails),
+            "emails": emails
+        }
 
     except Exception as e:
-        return HTTPException(status_code=500, detail=f"Failed to search emails: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to search emails: {str(e)}")
 
