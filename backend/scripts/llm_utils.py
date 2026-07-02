@@ -83,6 +83,21 @@ class LLMEngine:
         """No local GPU state to free; kept for interface compatibility."""
         pass
 
+    def set_model(self, model_name: str):
+        """Switch the model used for subsequent prompt() calls."""
+        if model_name and model_name != self.model:
+            self.model = model_name
+
+    def list_models(self) -> list[str]:
+        """Query Ollama for the models currently pulled on the host."""
+        try:
+            resp = requests.get(f"{self.host}/api/tags", timeout=10)
+            resp.raise_for_status()
+            return [m["name"] for m in resp.json().get("models", [])]
+        except requests.RequestException as e:
+            print(f"[LLMEngine] Could not list models at {self.host}: {e}")
+            return [self.model]
+
     def prompt(
         self,
         prompt: str,
