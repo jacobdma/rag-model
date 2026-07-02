@@ -150,7 +150,7 @@ def get_last_sync_date(existing_emails: dict) -> datetime | None:
 
     dates = []
     for email_data in existing_emails.values():
-        if 'datetime_recieved' in email_data:
+        if 'datetime_received' in email_data:
             try:
                 date = datetime.fromisoformat(email_data['datetime_received'].replace('Z', '+00:00'))
                 dates.append(date)
@@ -449,7 +449,7 @@ async def sync_emails(request: EmailSyncRequest):
         query = account.inbox.all().order_by("-datetime_received")
 
         if last_sync_date:
-            query = account.inbox.filter(datetime_received_gt=last_sync_date).order_by("-datetime_received")
+            query = account.inbox.filter(datetime_received__gt=last_sync_date).order_by("-datetime_received")
 
         emails_to_process = list(query[:batch_size])
         total_emails = len(emails_to_process)
