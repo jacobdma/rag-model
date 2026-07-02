@@ -183,7 +183,16 @@ CURRENT_CONFIG = {}
 @app.post("/set-config")
 async def set_config(config: Configuration):
     CURRENT_CONFIG.update(config.model_dump())
+    ModelConfig.TEMPERATURE = config.temperature
+    ModelConfig.TONE = config.tone
+    ModelConfig.MODEL = config.model
+    get_llm_engine().set_model(config.model)
     return {"message": "Config updated", "config": CURRENT_CONFIG}
+
+@app.get("/models")
+async def list_models():
+    engine = get_llm_engine()
+    return {"models": engine.list_models(), "current": engine.model}
 
 @app.post("/chat")
 async def stream_query(

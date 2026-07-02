@@ -21,8 +21,9 @@ export default function SettingsMenu({
   setTheme,
 }: SettingsMenuProps) {
   const [temperature, setTemperature] = useState(0.00645)
-  const [model, setModel] = useState("mistralai/Mistral-7B-Instruct-v0.1")
+  const [model, setModel] = useState("")
   const [tone, setTone] = useState("neutral")
+  const [modelOptions, setModelOptions] = useState<{ label: string; value: string }[]>([])
 
   const temperatureStops = [
     { value: 0.00645, label: "Precise" },
@@ -39,6 +40,17 @@ export default function SettingsMenu({
   }
 
   useEffect(() => {
+    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/models`)
+      .then((res) => res.json())
+      .then((data) => {
+        setModelOptions((data.models || []).map((name: string) => ({ label: name, value: name })))
+        setModel(data.current || "")
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!model) return
     const config = { temperature, model, tone }
     fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/set-config`, {
       method: "POST",
@@ -51,10 +63,6 @@ export default function SettingsMenu({
     { label: "Formal", value: "formal" },
     { label: "Neutral", value: "neutral" },
     { label: "Casual", value: "casual" },
-  ]
-
-  const modelOptions = [
-    { label: "Mistral", value: "mistralai/Mistral-7B-Instruct-v0.1"},
   ]
 
   const [nickname, setNickname] = useState<string>("")
