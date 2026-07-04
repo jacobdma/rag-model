@@ -3,10 +3,50 @@
 import type React from "react"
 import { useRef, useEffect, memo } from "react"
 import { Search, Edit2 } from "lucide-react"
+import ReactMarkdown, { type Components } from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 export interface Message {
   role: "user" | "assistant"
   content: string
+}
+
+const markdownComponents: Components = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="list-disc pl-5 mb-2 last:mb-0 space-y-1">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 last:mb-0 space-y-1">{children}</ol>,
+  li: ({ children }) => <li>{children}</li>,
+  a: ({ children, href }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+    >
+      {children}
+    </a>
+  ),
+  pre: ({ children }) => (
+    <pre className="overflow-x-auto rounded-lg p-3 mb-2 last:mb-0 bg-neutral-100 dark:bg-neutral-900 font-mono text-responsive-sm">
+      {children}
+    </pre>
+  ),
+  code: ({ children, className }) => (
+    <code className={className ? "font-mono" : "font-mono px-1 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900"}>
+      {children}
+    </code>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto mb-2 last:mb-0">
+      <table className="border-collapse">{children}</table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="border border-neutral-300 dark:border-neutral-800 px-2 py-1 text-left">{children}</th>
+  ),
+  td: ({ children }) => (
+    <td className="border border-neutral-300 dark:border-neutral-800 px-2 py-1">{children}</td>
+  ),
 }
 
 interface MessageListProps {
@@ -98,12 +138,13 @@ function MessageListComponent({
           ) : (
             // Normal message display
             <div className="relative">
-              <div className={`inline-block px-2 py-2 text-responsive-base rounded-lg break-words whitespace-pre-wrap text-left${
-                message.role === "user" 
+              <div className={`inline-block px-2 py-2 text-responsive-base rounded-lg break-words text-left${
+                message.role === "user"
                 ? `
-                  bg-neutral-200                  
+                  whitespace-pre-wrap
+                  bg-neutral-200
                   dark:bg-neutral-800
-                  text-neutral-700 
+                  text-neutral-700
                   dark:text-neutral-300
                   font-medium
                   max-w-[80%]
@@ -116,7 +157,13 @@ function MessageListComponent({
                   max-w-[100%]
                   `
                 }`}>
-                {message.content}
+                {message.role === "user" ? (
+                  message.content
+                ) : (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {message.content}
+                  </ReactMarkdown>
+                )}
               </div>
               
               {/* Edit button - only show for user messages and when not currently streaming */}
