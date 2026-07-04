@@ -1,5 +1,4 @@
 import React from "react";
-import styles from "./Slider.module.css";
 
 interface SliderProps {
   label: string;

@@ -26,7 +26,6 @@ function ContextWindowComponent({
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const [fullTextModalIndex, setFullTextModalIndex] = useState<number | null>(null)
-  const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([])
 
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen
   const setIsOpen = externalSetIsOpen || setInternalIsOpen
@@ -42,7 +41,6 @@ function ContextWindowComponent({
   }, [contextChunks])
 
   const handleDocumentsChange = (documents: any[]) => {
-    setUploadedDocuments(documents)
     if (documents.length > 0) {
       setIsOpen(true)
     } else if (safeChunks.length === 0) {

@@ -36,6 +36,13 @@ from .utils import LoginData, QueryInput, Configuration, UploadedDocument
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout), logging.FileHandler("logs/app.log")],
+)
+logger = logging.getLogger(__name__)
+
 # App initialization
 app = FastAPI()
 pipeline = RAGPipeline()
@@ -51,7 +58,7 @@ server = Server(ldap["server"], get_info=ALL)
 
 def kill_process():
     """Kill this process and all its children immediately."""
-    print("Killing backend process tree due to timeout.")
+    logger.warning("Killing backend process tree due to timeout.")
     try:
         parent = psutil.Process(os.getpid())
         for child in parent.children(recursive=True):
@@ -60,8 +67,8 @@ def kill_process():
             except Exception:
                 pass
         parent.kill()
-    except Exception as e:
-        print("Failed to kill with psutil:", e)
+    except Exception:
+        logger.exception("Failed to kill with psutil")
         os._exit(1)  # ultimate fallback
 
 def authenticate_user(username: str, password: str) -> str | None:
@@ -89,7 +96,7 @@ def create_jwt_token(user_id: str) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 pipeline._get_retrievers()
-get_llm_engine()._load_model(ModelConfig.MODEL)
+get_llm_engine()._load_model()
 
 app.add_middleware(
     CORSMiddleware,
@@ -105,7 +112,7 @@ CHAT_DOCUMENTS = {}
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     raw_body = await request.body()
-    logging.warning(f"Validation error: {exc}")
+    logger.warning(f"Validation error: {exc}")
     body = json.loads(raw_body.decode())
     body.pop("password", None)
     return JSONResponse(
@@ -187,7 +194,6 @@ async def set_config(config: Configuration):
     CURRENT_CONFIG.update(config.model_dump())
     ModelConfig.TEMPERATURE = config.temperature
     ModelConfig.TONE = config.tone
-    ModelConfig.MODEL = config.model
     get_llm_engine().set_model(config.model)
     return {"message": "Config updated", "config": CURRENT_CONFIG}
 
@@ -219,7 +225,7 @@ async def stream_query(
             input.query,
             input.history,
             input.use_web_search,
-            chat_id=chat_id
+            chat_documents=CHAT_DOCUMENTS.get(chat_id, [])
         )
 
         # --- Timeout watchdog ---
@@ -231,7 +237,7 @@ async def stream_query(
             while not stop_watchdog.is_set():
                 time.sleep(1)
                 if time.time() - last_yield_time > TIMEOUT:
-                    print(f"No progress for {TIMEOUT}s — killing backend.")
+                    logger.warning(f"No progress for {TIMEOUT}s — killing backend.")
                     kill_process()
                     return
 
@@ -261,9 +267,9 @@ async def stream_query(
         # Only save if not interrupted
         if not await request.is_disconnected():
             existing_chat = chats_collection.find_one({"_id": chat_id})
-            print("Saving chat history...")
+            logger.info("Saving chat history...")
             if existing_chat is not None and len(input.history) < len(existing_chat.get("history", [])):
-                print("Editing...")
+                logger.info("Editing...")
                 chats_collection.update_one(
                     {"_id": chat_id},
                     {
@@ -297,13 +303,9 @@ async def stream_query(
                     upsert=True
                 )
         else:
-            print("Request disconnected, not saving chat history.")
+            logger.info("Request disconnected, not saving chat history.")
 
-    async def string_generator():
-        async for item in token_generator():
-            yield str(item)
-    
-    return StreamingResponse(string_generator(), media_type="text/plain")
+    return StreamingResponse(token_generator(), media_type="text/plain")
 
 @app.get("/chats")
 async def get_chats(authorization: str = Header(...)):
@@ -323,7 +325,7 @@ async def delete_chat(chat_id: str, authorization: str = Header(...)):
     })
     
     if result.deleted_count == 0:
-        print(f"Failed to delete chat {chat_id} for user {username}")
+        logger.warning(f"Failed to delete chat {chat_id} for user {username}")
         raise HTTPException(status_code=404, detail="Chat not found")
 
     CHAT_DOCUMENTS.pop(chat_id, None)
@@ -340,7 +342,8 @@ async def upload_files(
     
     supported_extensions = {".docx", ".pptx", ".txt", ".pdf", ".csv"}
     processed_files = []
-    
+    reader = FileReader(supported_extensions)
+
     for file in files:
         try:
             # Check file extension
@@ -348,14 +351,13 @@ async def upload_files(
             if file_ext not in supported_extensions:
                 processed_files.append({
                     "filename": file.filename,
-                    "status": "error",    
+                    "status": "error",
                     "message": f"Unsupported file type: {file_ext}"
                 })
                 continue
-            
+
             file_content = await file.read()
-            reader = FileReader(supported_extensions)
-            
+
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as temp_file:
                 temp_file.write(file_content)
                 temp_file.flush()
@@ -409,24 +411,6 @@ async def upload_files(
         "processed_files": processed_files,
         "total_documents": len(CHAT_DOCUMENTS[chat_id])
     }
-
-'''
-@app.get("/chat-documents/{chat_id}")
-async def get_chat_documents(chat_id: str):
-    """Get uploaded documents for a specific chat"""
-    documents = CHAT_DOCUMENTS.get(chat_id, [])
-    return {
-        "chat_id": chat_id,
-        "documents": [
-            {
-                "filename": doc.filename,
-                "file_type": doc.file_type,
-                "size": len(doc.content)
-            }
-            for doc in documents
-        ]
-    }
-'''
 
 @app.delete("/chat-documents/{chat_id}/{filename}")
 async def delete_chat_document(chat_id: str, filename: str):

@@ -52,11 +52,14 @@ export default function SettingsMenu({
   useEffect(() => {
     if (!model) return
     const config = { temperature, model, tone }
-    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/set-config`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
-    })
+    const timeoutId = setTimeout(() => {
+      fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/set-config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      })
+    }, 300)
+    return () => clearTimeout(timeoutId)
   }, [temperature, model, tone])
 
   const toneOptions = [

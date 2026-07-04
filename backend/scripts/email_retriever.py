@@ -1,10 +1,13 @@
 import hashlib
+import logging
 import time
 from datetime import datetime, timedelta
 from typing import Optional
 
 from exchangelib import Credentials, Account, Configuration as ExchangeConfig, DELEGATE, Q
 from langchain_core.documents import Document
+
+logger = logging.getLogger(__name__)
 
 
 class EmailRetriever:
@@ -30,21 +33,21 @@ class EmailRetriever:
                 autodiscover=False,
                 access_type=DELEGATE
             )
-        except Exception as e:
-            print(f"[EmailRetriever] Failed to connect to Exchange: {e}")
+        except Exception:
+            logger.exception("Failed to connect to Exchange")
             self.account = None
     
     def retrieve_emails(self, query: str, max_results: int = 5) -> list[Document]:
         """Search Exchange emails and return full emails as Documents."""
 
         if not self.account:
-            print("[EmailRetriever] No Exchange account configured, skipping email search")
+            logger.warning("No Exchange account configured, skipping email search")
             return []
-        
+
         cache_key = f"{self.username}:{hashlib.md5(query.lower().encode()).hexdigest()[:8]}"
         cached = self._get_cached(cache_key)
         if cached:
-            print(f"[EmailRetriever] Using cached results for query: {query}")
+            logger.info(f"Using cached results for query: {query}")
             return cached[:max_results]
         
         try:
@@ -97,18 +100,18 @@ class EmailRetriever:
                     if len(documents) >= max_results:
                         break
                         
-                except Exception as e:
-                    print(f"[EmailRetriever] Error processing email: {e}")
+                except Exception:
+                    logger.exception("Error processing email")
                     continue
-            
+
             # Cache results
             self._set_cache(cache_key, documents)
-            
-            print(f"[EmailRetriever] Retrieved {len(documents)} emails for query: {query}")
+
+            logger.info(f"Retrieved {len(documents)} emails for query: {query}")
             return documents
-            
-        except Exception as e:
-            print(f"[EmailRetriever] Search failed: {e}")
+
+        except Exception:
+            logger.exception("Email search failed")
             return []
     
     def _format_email(self, email) -> str:
