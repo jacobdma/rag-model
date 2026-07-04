@@ -11,7 +11,6 @@ export default function LoginForm({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [token, setToken] = useState("");
 
   const handleLogin = async () => {
     setError("");
@@ -29,7 +28,6 @@ export default function LoginForm({
       }
 
       const data = await res.json();
-      setToken(data.access_token);
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("username", data.username);
       onLogin(data.access_token, data.username);

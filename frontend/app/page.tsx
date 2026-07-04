@@ -129,9 +129,7 @@ export default function Chat() {
   function generateChatTitle(message: string): string {
     const stopwords = new Set(["the", "a", "an", "of", "to", "is", "and", "in", "on", "with", "that", "for", "as"]);
     const words = message.trim().split(/\s+/).filter(word => !stopwords.has(word.toLowerCase()));
-    const firstFew = words.slice(0, 6).join(" ");
-    const title = firstFew[0] + firstFew.slice(1);
-    return `${title}`;
+    return words.slice(0, 6).join(" ");
   }
 
   const handleSubmit = async (e: React.FormEvent, messageContent?: string, fromIndex?: number) => {

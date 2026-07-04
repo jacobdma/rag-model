@@ -3,10 +3,10 @@ import os
 import yaml
 from pathlib import Path
 
-def get_cache_dir() -> tuple[Path, Path, Path, Path]:
+def get_cache_dir() -> tuple[Path, Path, Path]:
     """
     Finds the project root (by searching for __init__.py), then returns
-    (CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR) as Path objects.
+    (CACHE_DIR, ROOT_DIR, LOG_DIR) as Path objects.
     CACHE_DIR can be overridden by the CACHE_DIR environment variable.
     """
     current = Path(__file__).resolve()
@@ -18,10 +18,9 @@ def get_cache_dir() -> tuple[Path, Path, Path, Path]:
         raise RuntimeError("Could not find project root (missing __init__.py)")
     cache_dir = Path(os.getenv("CACHE_DIR", root_dir / "cache")).resolve()
     log_dir = root_dir / "logs"
-    index_dir = root_dir / "indexes"
-    return cache_dir, root_dir, log_dir, index_dir
+    return cache_dir, root_dir, log_dir
 
-CACHE_DIR, ROOT_DIR, LOG_DIR, INDEX_DIR = get_cache_dir()
+CACHE_DIR, ROOT_DIR, LOG_DIR = get_cache_dir()
 
 class DocumentLoader:
     def __init__(self):

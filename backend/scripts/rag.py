@@ -1,4 +1,5 @@
 # Standard library imports
+import logging
 import os
 import threading
 import time
@@ -16,7 +17,9 @@ from .chunk_documents import DocumentChunker
 from . import config
 from .config import ModelConfig
 from .handler import TechnicalHandler
-from .utils import Message
+from .utils import Message, UploadedDocument
+
+logger = logging.getLogger(__name__)
 
 class RAGPipeline:
     lock = threading.Lock()
@@ -51,17 +54,16 @@ class RAGPipeline:
         if "webPages" in data:
             return [item["snippet"] for item in data["webPages"]["value"][:max_results]]
         return []
-    
+
     @staticmethod
     def get_surrounding_chunks(doc: Document, chunks_by_source: dict[str, list[Document]], target_chars: int = 1500) -> list[Document]:
         source = doc.metadata.get("source", "")
         source = os.path.normpath(source)
         if not source or source not in chunks_by_source:
             return [doc]
-        
+
         chunk_list = chunks_by_source[source]
         index = doc.metadata.get("chunk_number", 0)
-        print(f"INDEX: {index}")
         selected = [doc]
         total_chars = len(chunk_list[index].page_content)
 
@@ -82,16 +84,11 @@ class RAGPipeline:
                 break
 
         return selected
-    
-    def _process_chat_documents(self, chat_id: str) -> list[Document]:
-        """Process uploaded documents for a specific chat"""
-        from .main import CHAT_DOCUMENTS
-        
-        if chat_id not in CHAT_DOCUMENTS:
-            return []
-        
+
+    def _process_chat_documents(self, uploaded_documents: list[UploadedDocument]) -> list[Document]:
+        """Chunk uploaded documents for a specific chat"""
         chat_docs = []
-        for uploaded_doc in CHAT_DOCUMENTS[chat_id]:
+        for uploaded_doc in uploaded_documents:
             chunks = DocumentChunker().clean_paragraphs(
                 docs=[uploaded_doc.content],
                 chunk_size=512,
@@ -100,37 +97,35 @@ class RAGPipeline:
                 source=f"Uploaded"
             )
             chat_docs.extend(chunks)
-        
+
         return chat_docs
 
-    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, chat_id: str = None):
+    def generate(self, query: str, chat_history: list[Message], use_web_search: bool = False, chat_documents: list[UploadedDocument] = None):
         """Stream the RAG pipeline for interactive question answering."""
         start_time = time.time()
         # 1. Load retrievers
         t0 = time.time()
         hybrid_retriever, chunk_dict = self._get_retrievers()
-        print(f"[1. Retrieval] Loaded retrievers in {time.time() - t0:.2f}s")
+        logger.debug(f"[1. Retrieval] Loaded retrievers in {time.time() - t0:.2f}s")
         try:
-            # Enhanced classification
+            # 2. Enhanced classification
             t0 = time.time()
             classification_prompt = config.ENHANCED_CLASSIFICATION_TEMPLATE.format(message=query)
             classification = self.engine.prompt(
                 prompt=classification_prompt,
                 temperature=0.05
             ).strip().lower()
-            print(f"Classification: {classification}")
-            print(f"[2. Classification] Completed in {time.time() - t0:.2f}s")
-            
+            logger.debug(f"[2. Classification] '{classification}' in {time.time() - t0:.2f}s")
+
             # Route based on classification
             if classification == "conversational":
-                while True:
-                    prompt = config.CHAT_RESPONSE_TEMPLATE.format(message=query).strip() + "\n\nAssistant:"
-                    streamer = self.engine.prompt(prompt=prompt, stream=True, temperature=0.7)
-                    
-                    for token in streamer:
-                        yield token
-                    return None
-            
+                prompt = config.CHAT_RESPONSE_TEMPLATE.format(message=query).strip() + "\n\nAssistant:"
+                streamer = self.engine.prompt(prompt=prompt, stream=True, temperature=0.7)
+
+                for token in streamer:
+                    yield token
+                return None
+
             elif classification in ["math", "coding", "mixed"]:
                 # Route to technical handler
                 for token in TechnicalHandler(self.engine, hybrid_retriever).handle_technical_query_stream(query, classification, chat_history):
@@ -143,7 +138,7 @@ class RAGPipeline:
             if use_web_search:
                 web_results_list = self._search_bing(query)
                 web_results = "\n\n".join(web_results_list)
-                print(f"[3. Web Search] Retrieved {len(web_results_list)} results in {time.time() - t0:.2f}s")
+                logger.debug(f"[3. Web Search] Retrieved {len(web_results_list)} results in {time.time() - t0:.2f}s")
 
             # 4. Get chat history
             t0 = time.time()
@@ -157,28 +152,25 @@ class RAGPipeline:
                 history_chain.extend([user_msg.model_dump(), assistant_msg.model_dump()])
 
             history_chain = history_chain[::-1]
-            print(f"[4. Chat History] Processed {len(history_chain)} pairs in {time.time() - t0:.2f}s")
+            logger.debug(f"[4. Chat History] Processed {len(history_chain)} pairs in {time.time() - t0:.2f}s")
 
-            # 6. Invokes retrievers to get relevant chunks
+            # 5. Invoke retrievers to get relevant chunks
             t0 = time.time()
-            docs = hybrid_retriever.retrieve_context(query, max_results=5) 
-            print(f"[6. Retrieval] Retrieved {len(docs)} chunks in {time.time() - t0:.2f}s")
+            docs = hybrid_retriever.retrieve_context(query, max_results=5)
+            logger.debug(f"[5. Retrieval] Retrieved {len(docs)} chunks in {time.time() - t0:.2f}s")
 
-             # 7. Get uploaded chat documents if chat_id provided
+            # 6. Chunk uploaded chat documents, if any
             t0 = time.time()
-            chat_documents = []
-            if chat_id:
-                chat_documents = self._process_chat_documents(chat_id)
-            print(f"[7. Chat Documents] Processed {len(chat_documents)} documents in {time.time() - t0:.2f}s")
+            chat_docs = self._process_chat_documents(chat_documents) if chat_documents else []
+            logger.debug(f"[6. Chat Documents] Processed {len(chat_docs)} documents in {time.time() - t0:.2f}s")
 
-            # 8. Combine regular docs with chat documents
-            all_docs = docs + chat_documents
+            all_docs = docs + chat_docs
 
             # 7. Get surrounding documents
+            t0 = time.time()
             retrieved_info = []
             context_list = []
-            
-            t0 = time.time()
+
             for doc in all_docs:
                 if doc.metadata.get("source") == "Uploaded":
                     context_chunks = [doc]
@@ -198,20 +190,20 @@ class RAGPipeline:
                         for c in context_chunks[:3]  # Limit surrounding chunks
                     ]
                 })
-                
+
                 # Combine context with length limit
                 combined_content = ''.join([c.page_content for c in context_chunks])
                 context_list.append(combined_content[:1500])  # Truncate combined content
 
             context = '\n\n'.join(context_list)
             yield retrieved_info
-            print(f"[7. Context] Processed {len(context_list)} contexts in {time.time() - t0:.2f}s")
-    
-            # 8. Constructs prompt
+            logger.debug(f"[7. Context] Processed {len(context_list)} contexts in {time.time() - t0:.2f}s")
+
+            # 8. Construct prompt
             t0 = time.time()
             def format_block(label, content):
                 return f"{label}:\n{content.strip()}\n\n" if content else ""
- 
+
             history_lines = [f"{entry['role'].capitalize()}: {entry['content']}" for entry in history_chain] if history_chain else []
             prompt = config.RESPONSE_PREFIX.format(
                 context=format_block("Context", context),
@@ -219,9 +211,9 @@ class RAGPipeline:
                 web_context=format_block("Web Context", web_results),
                 original_query=format_block("Original Query", query)
             )
-            print(f"[8. Prompt] Constructed in {time.time() - t0:.2f}s")
+            logger.debug(f"[8. Prompt] Constructed in {time.time() - t0:.2f}s")
 
-            # 9. Prompts LLM with context
+            # 9. Prompt LLM with context
             t0 = time.time()
             streamer = self.engine.prompt(
                 prompt=prompt,
@@ -230,7 +222,9 @@ class RAGPipeline:
             )
             for token in streamer:
                 yield token
-            print(f"[9. LLM Response] Generated from {len(prompt)} characters in {time.time() - t0:.2f}s")
+            logger.debug(f"[9. LLM Response] Generated from {len(prompt)} characters in {time.time() - t0:.2f}s")
+            logger.debug(f"[Total] Completed in {time.time() - start_time:.2f}s")
             return None
         except Exception as e:
+            logger.exception("RAG pipeline failed")
             yield f"\n[Error]: {e}\n"

@@ -15,11 +15,14 @@ The public surface is intentionally unchanged so callers in rag.py / handler.py
     engine.cleanup()          # no-op, kept for compatibility
 """
 import json
+import logging
 from typing import Iterator, Union
 
 import requests
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 _LLM_ENGINE_INSTANCE = None
 
@@ -71,10 +74,10 @@ class LLMEngine:
                 timeout=600,
             )
             resp.raise_for_status()
-            print(f"[LLMEngine] Loaded '{self.model}' on {self.host}")
+            logger.info(f"Loaded '{self.model}' on {self.host}")
         except requests.RequestException as e:
-            print(
-                f"[LLMEngine] Could not load '{self.model}' at {self.host}: {e}\n"
+            logger.error(
+                f"Could not load '{self.model}' at {self.host}: {e}\n"
                 f"            Is Ollama running, and has the model been pulled? "
                 f"(ollama pull {self.model})"
             )
@@ -95,7 +98,7 @@ class LLMEngine:
             resp.raise_for_status()
             return [m["name"] for m in resp.json().get("models", [])]
         except requests.RequestException as e:
-            print(f"[LLMEngine] Could not list models at {self.host}: {e}")
+            logger.error(f"Could not list models at {self.host}: {e}")
             return [self.model]
 
     def prompt(
@@ -117,8 +120,8 @@ class LLMEngine:
             resp = requests.post(self._generate_url, json=payload, timeout=600)
             resp.raise_for_status()
             return resp.json().get("response", "").strip()
-        except requests.RequestException as e:
-            print(f"[LLMEngine] Generation request failed: {e}")
+        except requests.RequestException:
+            logger.exception("Generation request failed")
             raise
 
     def _stream(self, payload: dict) -> Iterator[str]:
@@ -137,6 +140,6 @@ class LLMEngine:
                         yield chunk
                     if obj.get("done"):
                         break
-        except requests.RequestException as e:
-            print(f"[LLMEngine] Streaming request failed: {e}")
+        except requests.RequestException:
+            logger.exception("Streaming request failed")
             raise

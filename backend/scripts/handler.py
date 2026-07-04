@@ -1,9 +1,12 @@
 import re
 import ast
+import logging
 import sympy as sp
 
 from .utils import Message
 from . import config
+
+logger = logging.getLogger(__name__)
 
 class ResponseFormatter:
     """Handles formatting of technical responses with proper code blocks"""
@@ -21,10 +24,7 @@ class ResponseFormatter:
         
         # Replace code blocks
         formatted = re.sub(pattern, format_block, text, flags=re.DOTALL)
-        
-        # Handle inline code with backticks
-        formatted = re.sub(r'`([^`]+)`', r'`\1`', formatted)
-        
+
         return formatted
     
     @staticmethod
@@ -85,8 +85,8 @@ class QueryDecomposer:
             
             return components if components else [("simple", query)]
             
-        except Exception as e:
-            print(f"[DEBUG] Decomposition error: {e}")
+        except Exception:
+            logger.exception("Decomposition error")
             return [("simple", query)]
 
 class TechnicalHandler():
@@ -232,28 +232,6 @@ class TechnicalHandler():
                 return f"✗ Validation Error: {str(e)}"
 
         return re.sub(pattern, validate_code, response, flags=re.DOTALL)
-    
-    def _fallback_math(self, query: str) -> str:
-        """Fallback math handling without external tools"""
-        fallback_prompt = f"""
-        Solve this mathematical problem step by step using basic reasoning:
-        
-        {query}
-        
-        Show your work clearly and provide a final answer.
-        """
-        return self.engine.prompt(fallback_prompt, temperature=0.2)
-    
-    def _fallback_coding(self, query: str) -> str:
-        """Fallback coding handling without validation"""
-        fallback_prompt = f"""
-        Help with this coding request:
-        
-        {query}
-        
-        Provide clear code and explanation.
-        """
-        return self.engine.prompt(fallback_prompt, temperature=0.3)
     
     def _handle_context_retrieval(self, query: str, retriever):
         """Handle context retrieval component"""

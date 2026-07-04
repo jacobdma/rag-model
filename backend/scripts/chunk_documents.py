@@ -17,10 +17,12 @@ from langchain_core.documents import Document
 from .load_utils import CACHE_DIR, DocumentLoader
 from .file_readers import FileReader
 
+logger = logging.getLogger(__name__)
+
 class DocumentChunker:
-    def __init__(self, folder_paths: list[str] = []):
+    def __init__(self, folder_paths: list[str] = None):
         self._splitter_cache = {}
-        self.folder_paths = folder_paths
+        self.folder_paths = folder_paths or []
         self.loader = DocumentLoader()
         self._supported_exts = {".docx", ".pptx", ".txt", ".pdf", ".csv"} # List of supported extensions to filter
 
@@ -84,13 +86,13 @@ class DocumentChunker:
                         return chunks_by_source
                     else:
                         raise ValueError("No valid data found in cache")
-            except Exception as e:
-                print(f"[ERROR] Chunked docs could not be loaded. Re-chunking... Exception: {e}")
+            except Exception:
+                logger.exception("Chunked docs could not be loaded. Re-chunking...")
 
         # 2. Load or parse raw documents
         raw_documents = []
         if parsed_cache_path.exists():
-            print(f"[CACHE] Loaded pre-parsed documents from {parsed_cache_path}")
+            logger.info(f"Loaded pre-parsed documents from {parsed_cache_path}")
             try:
                 with open(parsed_cache_path, "r", encoding="utf-8") as f:
                     loaded_data = json.load(f)
@@ -98,14 +100,14 @@ class DocumentChunker:
                     if not isinstance(loaded_data, list):
                         raise ValueError(f"Expected list from parsed cache, got {type(loaded_data).__name__}")
                     raw_documents = loaded_data
-            except Exception as e:
-                print(f"[WARN] Failed to load parsed cache, will re-parse: {e}")
+            except Exception:
+                logger.exception("Failed to load parsed cache, will re-parse")
                 raw_documents = []
         else:
             all_files = []
             for folder in self.folder_paths:
                 all_files.extend(self.loader.gather_supported_files(folder))
-            print(f"[DEBUG] Total discovered files: {len(all_files)}")
+            logger.info(f"Total discovered files: {len(all_files)}")
             reader = FileReader(self._supported_exts)
             skipped = 0
             with tqdm(total=len(all_files), desc="Parsing documents", unit="file") as pbar, \
@@ -121,18 +123,17 @@ class DocumentChunker:
                         if filename is not None:
                             filename = os.path.normpath(filename)
                         raw_documents.append((text, filename))
-                    except Exception as e:
-                        logging.exception(f"[Thread Error] {e}")
+                    except Exception:
+                        logger.exception("Thread error while parsing document")
                     pbar.update(1)
-            print(f"[DEBUG] ← Total successfully loaded documents: {len(raw_documents)}")
-            print(f"[DEBUG] ← Total successfully loaded documents: {len(raw_documents)}")
-            print(f"[DEBUG] ← Total skipped documents: {skipped}")
+            logger.info(f"Total successfully loaded documents: {len(raw_documents)}")
+            logger.info(f"Total skipped documents: {skipped}")
             try:
                 parsed_cache_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(parsed_cache_path, "w", encoding="utf-8") as f:
                     json.dump(raw_documents, f, ensure_ascii=False)
-            except Exception as e:
-                print(f"[WARN] Failed to cache parsed docs: {e}")
+            except Exception:
+                logger.exception("Failed to cache parsed docs")
 
         if not raw_documents:
             raise ValueError("No documents were loaded. Cannot create indexes.")
@@ -147,8 +148,8 @@ class DocumentChunker:
             for future in tqdm(as_completed(futures), total=len(raw_documents), desc=f"Chunking documents"):
                 try:
                     results.extend(future.result())
-                except Exception as e:
-                    print(f"[WARN] Chunking failed for a document: {e}")
+                except Exception:
+                    logger.exception("Chunking failed for a document")
 
         # 4. Sort by source
         chunks_by_source = defaultdict(list)
@@ -176,7 +177,7 @@ class DocumentChunker:
                 indent=2,
                 ensure_ascii=False,
             )
-        except Exception as e:
-            print(f"[WARN] Failed to cache parsed docs: {e}")
+        except Exception:
+            logger.exception("Failed to cache chunked docs")
 
         return chunks_by_source

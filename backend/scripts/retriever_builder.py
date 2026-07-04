@@ -1,5 +1,6 @@
 # Standard library imports
 import gc
+import logging
 import os
 import time
 import torch
@@ -17,6 +18,8 @@ from . import config
 from .chunk_documents import DocumentChunker
 from .hybrid_retriever import HybridRetriever
 from .load_utils import CACHE_DIR
+
+logger = logging.getLogger(__name__)
 
 class RetrieverBuilder:
     CHUNK_SIZE = 1024
@@ -42,22 +45,22 @@ class RetrieverBuilder:
                 cache_path = CACHE_DIR / f"faiss_embeddings{self.tag}.pkl"
                 
                 if cache_path.exists():
-                    print("[FAISS] Loading cached embeddings...")
+                    logger.info("Loading cached embeddings...")
                     embedding_vectors = self._load_embeddings(cache_path, docs)
                 else:
-                    print("[FAISS] Generating embeddings...")
+                    logger.info("Generating embeddings...")
                     embedding_vectors = self._generate_embeddings(model, cache_path, docs)
-                
+
             finally:
                 torch.cuda.empty_cache()
                 gc.collect()
-                print("[FAISS] Embedding model cleaned up")
+                logger.info("Embedding model cleaned up")
 
         if not docs:
-            print(f"[WARN] No documents to embed. Skipping FAISS build.")
+            logger.warning("No documents to embed. Skipping FAISS build.")
             return
-        
-        print(f"[FAISS] Building index with {len(embedding_vectors)} documents")
+
+        logger.info(f"Building index with {len(embedding_vectors)} documents")
         
         batch_size = 5000
         metadatas = [doc.metadata for doc in docs]
@@ -112,7 +115,7 @@ class RetrieverBuilder:
         else:
             t0 = time.time()
             faiss = FAISS.load_local(self.faiss_path, embeddings, allow_dangerous_deserialization=True)
-            print(f"[FAISS] Loaded in {time.time() - t0:.2f}s")
+            logger.info(f"FAISS index loaded in {time.time() - t0:.2f}s")
 
         faiss_retriever = faiss.as_retriever(search_type="mmr", search_kwargs={'k': 6})
         hybrid_retriever = HybridRetriever(bm25, faiss_retriever)
@@ -162,7 +165,7 @@ class RetrieverBuilder:
                         
                     except RuntimeError as e:
                         if "CUDA out of memory" in str(e):
-                            print(f"[WARN] CUDA OOM, reducing batch size")
+                            logger.warning("CUDA OOM, reducing batch size")
                             batch_size = max(1, batch_size // 2)
                             continue
                         raise
