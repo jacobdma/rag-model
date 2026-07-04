@@ -1,6 +1,7 @@
 # Standard library imports
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 # Third-party imports
 from langchain_community.retrievers import BM25Retriever
@@ -51,8 +52,10 @@ class HybridRetriever:
         return docs[:max_results]
     
     def get_relevant_documents(self, query: str, k: int = 12) -> list[Document]:
-        bm25_docs = self.bm25.invoke(query)
-        faiss_docs = self.faiss_retriever.invoke(query)
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f_bm25 = ex.submit(self.bm25.invoke, query)
+            f_faiss = ex.submit(self.faiss_retriever.invoke, query)
+            bm25_docs, faiss_docs = f_bm25.result(), f_faiss.result()
 
         # Deduplicate results by content
         seen, merged = set(), []
