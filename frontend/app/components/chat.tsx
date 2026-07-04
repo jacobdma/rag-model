@@ -1,7 +1,7 @@
 'use client'
 
 import type React from "react"
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, memo } from "react"
 import { Search, Edit2 } from "lucide-react"
 
 export interface Message {
@@ -21,8 +21,8 @@ interface MessageListProps {
   isStreaming: boolean
 }
 
-export function MessageList({ 
-  messages, 
+function MessageListComponent({
+  messages,
   isLoading,
   editingMessageIndex,
   editingContent,
@@ -37,7 +37,7 @@ export function MessageList({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [isStreaming])
 
   useEffect(() => {
     if (editTextareaRef.current) {
@@ -151,7 +151,9 @@ export function MessageList({
   )
 }
 
-export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebSearch, onSubmit, isStreaming, onStop }: any) {
+export const MessageList = memo(MessageListComponent)
+
+function ChatInputComponent({ input, setInput, isLoading, useWebSearch, setUseWebSearch, onSubmit, isStreaming, onStop }: any) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
   useEffect(() => {
@@ -244,3 +246,5 @@ export function ChatInput({ input, setInput, isLoading, useWebSearch, setUseWebS
     </form>
   )
 }
+
+export const ChatInput = memo(ChatInputComponent)

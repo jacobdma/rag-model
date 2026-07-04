@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { DocumentUpload } from "@/components/DocumentUpload"
 import { FolderX } from "lucide-react"
 
@@ -16,7 +16,7 @@ interface ContextWindowProps {
   token: string | null
 }
 
-export function ContextWindow({ 
+function ContextWindowComponent({
   contextChunks, 
   isOpen: externalIsOpen, 
   setIsOpen: externalSetIsOpen,
@@ -194,3 +194,5 @@ export function ContextWindow({
     </>
   )
 }
+
+export const ContextWindow = memo(ContextWindowComponent)

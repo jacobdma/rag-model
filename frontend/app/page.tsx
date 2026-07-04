@@ -185,6 +185,44 @@ export default function Chat() {
 
     const controller = new AbortController();
     setStreamController(controller);
+    const streamTimeoutId = setTimeout(() => controller.abort(), 90_000);
+
+    // Batches per-token state updates into one flush per animation frame,
+    // instead of one setChats call per decoded chunk (~400/response).
+    let assistantMessage = ""
+    let pendingFlush: number | null = null
+
+    function flush() {
+      pendingFlush = null
+      const content = assistantMessage
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.id === currentActiveChatId
+            ? {
+                ...chat,
+                history: chat.history.map((msg, idx) =>
+                  idx === chat.history.length - 1 && msg.role === "assistant"
+                    ? { ...msg, content }
+                    : msg
+                ),
+              }
+            : chat
+        )
+      )
+    }
+
+    function scheduleFlush() {
+      if (pendingFlush === null) {
+        pendingFlush = requestAnimationFrame(flush)
+      }
+    }
+
+    function cancelPendingFlush() {
+      if (pendingFlush !== null) {
+        cancelAnimationFrame(pendingFlush)
+        pendingFlush = null
+      }
+    }
 
     try {
       const headers: Record<string, string> = {
@@ -219,7 +257,6 @@ export default function Chat() {
 
       if (!response.ok || !response.body) throw new Error("Failed to get response")
 
-      let assistantMessage = ""
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat.id === currentActiveChatId
@@ -231,41 +268,85 @@ export default function Chat() {
         )
       )
 
+      // Sentinel/JSON payload for [CONTEXT START]...[CONTEXT END] can be split
+      // across separate stream chunks, so this parses from an accumulating
+      // buffer rather than assuming both markers land in the same chunk.
+      const CONTEXT_START = "[CONTEXT START]"
+      const CONTEXT_END = "[CONTEXT END]"
+      let mode: "text" | "context" = "text"
+      let textBuffer = ""
+
+      function processBuffer() {
+        let progressed = true
+        while (progressed) {
+          progressed = false
+          if (mode === "text") {
+            const startIdx = textBuffer.indexOf(CONTEXT_START)
+            if (startIdx !== -1) {
+              assistantMessage += textBuffer.slice(0, startIdx)
+              textBuffer = textBuffer.slice(startIdx + CONTEXT_START.length)
+              mode = "context"
+              progressed = true
+              continue
+            }
+            // Hold back a trailing slice that could be an in-progress marker
+            // split across the chunk boundary, so it isn't emitted as text.
+            let holdBack = 0
+            const maxCheck = Math.min(CONTEXT_START.length - 1, textBuffer.length)
+            for (let i = maxCheck; i > 0; i--) {
+              if (textBuffer.endsWith(CONTEXT_START.slice(0, i))) {
+                holdBack = i
+                break
+              }
+            }
+            const emitLen = textBuffer.length - holdBack
+            if (emitLen > 0) {
+              assistantMessage += textBuffer.slice(0, emitLen)
+              textBuffer = textBuffer.slice(emitLen)
+            }
+          } else {
+            const endIdx = textBuffer.indexOf(CONTEXT_END)
+            if (endIdx !== -1) {
+              const jsonStr = textBuffer.slice(0, endIdx)
+              try {
+                setContextData(JSON.parse(jsonStr))
+              } catch (err) {
+                console.warn("Failed to parse context data:", err)
+              }
+              textBuffer = textBuffer.slice(endIdx + CONTEXT_END.length)
+              mode = "text"
+              progressed = true
+            }
+            // else: context payload still incomplete, wait for more chunks
+          }
+        }
+      }
+
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
-        let chunk = decoder.decode(value)
-        if (chunk.includes("[CONTEXT START]")) {
-          const start = chunk.indexOf("[CONTEXT START]");
-          const end = chunk.indexOf("[CONTEXT END]");
-          const jsonStr = chunk.substring(start + 15, end);
-          try {
-            const parsed = JSON.parse(jsonStr);
-            setContextData(parsed);
-          } catch (err) {
-            console.warn("Failed to parse context data:", err);
-          }
-          chunk = chunk.replace(/\[CONTEXT START\][\s\S]*?\[CONTEXT END\]/, "");
+        if (value) {
+          textBuffer += decoder.decode(value, { stream: true })
+          processBuffer()
+          scheduleFlush()
         }
-        assistantMessage += chunk
-        setChats((prevChats) =>
-          prevChats.map((chat) =>
-            chat.id === currentActiveChatId
-              ? {
-                  ...chat,
-                  history: chat.history.map((msg, idx) =>
-                    idx === chat.history.length - 1 && msg.role === "assistant"
-                      ? { ...msg, content: assistantMessage }
-                      : msg
-                  ),
-                }
-              : chat
-          )
-        )
+        if (done) {
+          textBuffer += decoder.decode()
+          if (mode === "text" && textBuffer) {
+            assistantMessage += textBuffer
+            textBuffer = ""
+          }
+          break
+        }
       }
+
+      // Final flush so the committed state exactly matches the completed
+      // response, rather than whatever the last animation frame happened to catch.
+      cancelPendingFlush()
+      flush()
     } catch (err: any) {
+      cancelPendingFlush()
       if (err.name === "AbortError") {
         setChats((prevChats) =>
           prevChats.map((chat) =>
@@ -297,6 +378,8 @@ export default function Chat() {
         )
       }
     } finally {
+      cancelPendingFlush()
+      clearTimeout(streamTimeoutId);
       setIsLoading(false);
       setIsStreaming(false);
       setStreamController(null);
@@ -347,7 +430,7 @@ export default function Chat() {
         )
       )
     }
-  }, [history, activeChatId])
+  }, [history.length, activeChatId])
 
   function handleSignIn() {
     setShowLoginForm(true);

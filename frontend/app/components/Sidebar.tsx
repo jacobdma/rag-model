@@ -1,7 +1,7 @@
 import { MessageCircle, SquarePen, Trash2, User, Settings2, LogOut, Search, X, SearchX } from "lucide-react"
 import type { Message } from "@/components/chat"
 import { v4 } from "uuid"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, memo } from "react"
 
 type ChatSession = {
   id: string
@@ -20,7 +20,7 @@ type SidebarProps = {
   streamController: AbortController | null
 }
 
-export function Sidebar({
+function SidebarComponent({
   chats,
   activeChatId,
   setActiveChatId,
@@ -297,3 +297,5 @@ export function Sidebar({
     </>
   )
 }
+
+export const Sidebar = memo(SidebarComponent)
