@@ -324,6 +324,8 @@ async def delete_chat(chat_id: str, authorization: str = Header(...)):
         print(f"Failed to delete chat {chat_id} for user {username}")
         raise HTTPException(status_code=404, detail="Chat not found")
 
+    CHAT_DOCUMENTS.pop(chat_id, None)
+
     return {"message": "Chat deleted"}
 
 @app.post("/upload-files/{chat_id}")
