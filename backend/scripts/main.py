@@ -1,5 +1,6 @@
 # Standard library imports
 import json
+import logging
 import os
 import pathlib
 import psutil
@@ -104,13 +105,14 @@ CHAT_DOCUMENTS = {}
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     raw_body = await request.body()
-    print(f"Validation failed for body: {raw_body.decode()}")
-    print(f"Validation error details: {exc.errors()}")
+    logging.warning(f"Validation error: {exc}")
+    body = json.loads(raw_body.decode())
+    body.pop("password", None)
     return JSONResponse(
         status_code=422,
         content={
             "detail": exc.errors(),
-            "body": json.loads(raw_body.decode())
+            "body": body
         }
     )
 
