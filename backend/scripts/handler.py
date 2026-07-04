@@ -165,7 +165,7 @@ class TechnicalHandler():
             
             if len(components) == 1 and components[0][0] == "simple":
                 # Treat as general inquiry
-                yield "This appears to be a general inquiry. Processing..."
+                yield from self._handle_chat(query)
                 return
             
             yield f"Processing {len(components)} components:\n\n"
@@ -218,7 +218,7 @@ class TechnicalHandler():
     
     def _process_code_validation(self, response: str) -> str:
         """Process [VALIDATE: code_block] markers for syntax checking"""
-        pattern = r'\[VALIDATE:\s*([^\]]+)\]'
+        pattern = r'\[VALIDATE:\s*(.*?)\]'
         
         def validate_code(match):
             code_str = match.group(1).strip()
@@ -230,8 +230,8 @@ class TechnicalHandler():
                 return f"✗ Syntax Error: {str(e)}"
             except Exception as e:
                 return f"✗ Validation Error: {str(e)}"
-        
-        return re.sub(pattern, validate_code, response)
+
+        return re.sub(pattern, validate_code, response, flags=re.DOTALL)
     
     def _fallback_math(self, query: str) -> str:
         """Fallback math handling without external tools"""
@@ -259,7 +259,7 @@ class TechnicalHandler():
         """Handle context retrieval component"""
         try:
                 
-            docs = self.hybrid_retriever.retrieve_context(query)
+            docs = retriever.retrieve_context(query)
             
             if not docs:
                 yield "No relevant documentation found.\n"
