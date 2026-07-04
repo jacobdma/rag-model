@@ -46,7 +46,6 @@ class DocumentChunker:
             chunk_number = 0
             for chunk in split_chunks:
                 chunk = re.sub(r"\b\d{1,2}:\d{2}(:\d{2})?\b", "", chunk)  # timestamps
-                chunk = re.sub(r"[A-Z]{2,}\s?[0-9]{3,}", "", chunk)      # serial-like
                 chunk = re.sub(r"[^A-Za-z0-9.,;:(){}\[\]\-+/=_% ]+", " ", chunk)  # remove symbols
                 chunk = re.sub(r"\s+", " ", chunk).strip()               # collapse whitespace
 
