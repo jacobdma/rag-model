@@ -55,7 +55,7 @@ def read_pdf(f):
                     pix = page.get_pixmap(dpi=150)
                     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                     text = pytesseract.image_to_string(img)
-                if not text.strip():
+                elif not text.strip():
                     pix = page.get_pixmap(dpi=200)
                     img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                     text = pytesseract.image_to_string(img)
