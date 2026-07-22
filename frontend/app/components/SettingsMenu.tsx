@@ -4,6 +4,7 @@ import { Settings2, Mail, Palette } from "lucide-react"
 import Dropdown from "@/components/Dropdown"
 import Slider from "@/components/Slider"
 import { EmailInbox } from '@/components/EmailInbox'
+import { getBackendUrl } from "@/utils/api"
 
 interface SettingsMenuProps {
   open: boolean;
@@ -40,7 +41,7 @@ export default function SettingsMenu({
   }
 
   useEffect(() => {
-    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/models`)
+    fetch(`${getBackendUrl()}/models`)
       .then((res) => res.json())
       .then((data) => {
         setModelOptions((data.models || []).map((name: string) => ({ label: name, value: name })))
@@ -53,7 +54,7 @@ export default function SettingsMenu({
     if (!model) return
     const config = { temperature, model, tone }
     const timeoutId = setTimeout(() => {
-      fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/set-config`, {
+      fetch(`${getBackendUrl()}/set-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),

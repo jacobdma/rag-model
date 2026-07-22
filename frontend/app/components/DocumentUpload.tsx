@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { getBackendUrl } from '@/utils/api';
 
 interface UploadedDoc {
   filename: string;
@@ -50,7 +51,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
       const headers: Record<string, string> = {};
 
       const response = await fetch(
-        `http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/upload-files/${chatId}`,
+        `${getBackendUrl()}/upload-files/${chatId}`,
         {
           method: 'POST',
           headers,
@@ -120,7 +121,7 @@ export function DocumentUpload({ chatId, token, onDocumentsChange }: DocumentUpl
   const removeDocument = async (filename: string) => {
     try {
       await fetch(
-        `http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chat-documents/${chatId}/${filename}`,
+        `${getBackendUrl()}/chat-documents/${chatId}/${filename}`,
         { method: 'DELETE' }
       );
       updateDocuments(documents.filter(doc => doc.filename !== filename));
