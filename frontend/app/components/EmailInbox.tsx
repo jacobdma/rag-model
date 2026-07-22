@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { MailX, LogIn, RefreshCw } from "lucide-react"
+import { getBackendUrl } from "@/utils/api"
 
 interface Email {
   id: string
@@ -37,7 +38,7 @@ export function EmailInbox({ userId, token, emailCredentials }: EmailInboxProps)
   const loadEmails = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`http://localhost:8000/emails/${userId}`, {
+      const response = await fetch(`${getBackendUrl()}/emails/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -64,7 +65,7 @@ export function EmailInbox({ userId, token, emailCredentials }: EmailInboxProps)
     setSyncMessage("Syncing emails...")
 
     try {
-      const response = await fetch('http://localhost:8000/sync-emails', {
+      const response = await fetch(`${getBackendUrl()}/sync-emails`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
