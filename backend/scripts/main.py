@@ -33,7 +33,8 @@ from .file_readers import FileReader
 from .utils import LoginData, QueryInput, Configuration, UploadedDocument
 
 # Open and read config
-with open("config.yaml", "r") as f:
+config_path = pathlib.Path(__file__).resolve().parent.parent / "config.yaml"
+with open(config_path, "r") as f:
     config = yaml.safe_load(f)
 
 logging.basicConfig(

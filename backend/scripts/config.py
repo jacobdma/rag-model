@@ -1,12 +1,14 @@
 """Configuration file for model settings, prompt templates, and external API URLs."""
 import os
 import yaml
+from pathlib import Path
 
 # === Model & API Settings ===
 
 BING_API_URL = "https://api.bing.microsoft.com/v7.0/search"
 
-with open("config.yaml", "r") as f:
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yaml"
+with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
 
 BING_API_KEY = config["BING_API_KEY"]
