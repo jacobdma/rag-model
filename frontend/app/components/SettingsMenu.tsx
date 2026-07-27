@@ -229,7 +229,7 @@ export default function SettingsMenu({
                 <div>
                   <EmailInbox 
                     userId={localStorage.getItem("username")}
-                    token={localStorage.getItem("token")}
+                    token={localStorage.getItem("access_token")}
                     emailCredentials={{
                       username: localStorage.getItem("username"),
                       password: localStorage.getItem("password"),
