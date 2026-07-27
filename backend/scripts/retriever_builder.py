@@ -40,24 +40,23 @@ class RetrieverBuilder:
     def build_faiss(self, docs, embeddings):
         # Underlying SentenceTransformer model used for encoding
         model = embeddings._client
+        embedding_vectors = None
         if not os.path.exists(self.faiss_path):
-            try:
-                cache_path = CACHE_DIR / f"faiss_embeddings{self.tag}.pkl"
-                
-                if cache_path.exists():
-                    logger.info("Loading cached embeddings...")
-                    embedding_vectors = self._load_embeddings(cache_path, docs)
-                else:
-                    logger.info("Generating embeddings...")
-                    embedding_vectors = self._generate_embeddings(model, cache_path, docs)
+            cache_path = CACHE_DIR / f"faiss_embeddings{self.tag}.pkl"
 
-            finally:
-                torch.cuda.empty_cache()
-                gc.collect()
-                logger.info("Embedding model cleaned up")
+            if cache_path.exists():
+                logger.info("Loading cached embeddings...")
+                embedding_vectors = self._load_embeddings(cache_path, docs)
+            else:
+                logger.info("Generating embeddings...")
+                embedding_vectors = self._generate_embeddings(model, cache_path, docs)
 
         if not docs:
             logger.warning("No documents to embed. Skipping FAISS build.")
+            return
+
+        if embedding_vectors is None:
+            logger.warning(f"FAISS index already exists at {self.faiss_path}. Skipping build.")
             return
 
         logger.info(f"Building index with {len(embedding_vectors)} documents")
@@ -148,31 +147,39 @@ class RetrieverBuilder:
                 for i in range(0, len(texts), chunk_size):
                     chunk_texts = texts[i:i + chunk_size]
                     chunk_embeddings = []
-                    
-                    try:
-                        batch_vectors = model.encode(
-                            chunk_texts,
-                            batch_size=batch_size,
-                            show_progress_bar=False,
-                            convert_to_numpy=True,
-                            normalize_embeddings=True
-                        )
-                        # Convert to list immediately to save memory
-                        batch_vectors = [v.tolist() for v in batch_vectors]
-                        chunk_embeddings.extend(batch_vectors)
-                        
-                        pbar.update(len(chunk_texts))
-                        
-                    except RuntimeError as e:
-                        if "CUDA out of memory" in str(e):
-                            logger.warning("CUDA OOM, reducing batch size")
-                            batch_size = max(1, batch_size // 2)
-                            continue
-                        raise
-                    
+
+                    while True:
+                        try:
+                            batch_vectors = model.encode(
+                                chunk_texts,
+                                batch_size=batch_size,
+                                show_progress_bar=False,
+                                convert_to_numpy=True,
+                                normalize_embeddings=True
+                            )
+                            # Convert to list immediately to save memory
+                            batch_vectors = [v.tolist() for v in batch_vectors]
+                            chunk_embeddings.extend(batch_vectors)
+
+                            pbar.update(len(chunk_texts))
+                            break
+
+                        except RuntimeError as e:
+                            if "CUDA out of memory" in str(e) and batch_size > 1:
+                                batch_size = max(1, batch_size // 2)
+                                logger.warning(f"CUDA OOM, retrying chunk with batch size {batch_size}")
+                                torch.cuda.empty_cache()
+                                continue
+                            raise
+
                     dill.dump(chunk_embeddings, cache_file)
                     embeddings.extend(list(zip(chunk_texts, chunk_embeddings)))
                     del chunk_embeddings
                     gc.collect()
-        
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        logger.info("Embedding model cleaned up")
+
         return embeddings
