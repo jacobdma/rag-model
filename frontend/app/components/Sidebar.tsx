@@ -2,6 +2,7 @@ import { MessageCircle, SquarePen, Trash2, User, Settings2, LogOut, Search, X, S
 import type { Message } from "@/components/chat"
 import { v4 } from "uuid"
 import { useState, useRef, useEffect, memo } from "react"
+import { getBackendUrl } from "@/utils/api"
 
 type ChatSession = {
   id: string
@@ -75,7 +76,7 @@ function SidebarComponent({
 
     try {
       const token = localStorage.getItem("access_token");
-      await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chats/${chatId}`, {
+      await fetch(`${getBackendUrl()}/chats/${chatId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

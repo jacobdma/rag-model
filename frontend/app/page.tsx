@@ -9,6 +9,7 @@ import SettingsMenu from "@/components/SettingsMenu"
 import { Sidebar } from "@/components/Sidebar"
 import LoginForm from "@/components/LoginForm"
 import { ContextWindow } from "@/components/ContextWindow"
+import { getBackendUrl } from "@/utils/api"
 
 const WELCOME_MESSAGES = [
   "What can I help you find today?",
@@ -79,7 +80,7 @@ export default function Chat() {
 
     if (storedToken && storedUsername) {
       // Validate token by trying to fetch chats
-      fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chats`, {
+      fetch(`${getBackendUrl()}/chats`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       })
       .then(res => {
@@ -231,7 +232,7 @@ export default function Chat() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chat`, {
+      const response = await fetch(`${getBackendUrl()}/chat`, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -451,7 +452,7 @@ export default function Chat() {
     localStorage.setItem("username", user);
     setShowLoginForm(false);
 
-    fetch(`http://${process.env.NEXT_PUBLIC_HOST_IP}:${process.env.NEXT_PUBLIC_BACKEND_PORT}/chats`, {
+    fetch(`${getBackendUrl()}/chats`, {
       headers: { Authorization: `Bearer ${tok}` },
     })
     .then(res => res.json())
