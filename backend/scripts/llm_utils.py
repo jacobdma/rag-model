@@ -16,21 +16,26 @@ The public surface is intentionally unchanged so callers in rag.py / handler.py
 """
 import json
 import logging
+import threading
 from typing import Iterator, Union
 
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from . import config
 
 logger = logging.getLogger(__name__)
 
 _LLM_ENGINE_INSTANCE = None
+_LLM_ENGINE_LOCK = threading.Lock()
 
 
 def get_llm_engine():
     global _LLM_ENGINE_INSTANCE
     if _LLM_ENGINE_INSTANCE is None:
-        _LLM_ENGINE_INSTANCE = LLMEngine()
+        with _LLM_ENGINE_LOCK:
+            if _LLM_ENGINE_INSTANCE is None:
+                _LLM_ENGINE_INSTANCE = LLMEngine()
     return _LLM_ENGINE_INSTANCE
 
 
@@ -44,7 +49,7 @@ class LLMEngine:
         self.keep_alive = config.OLLAMA_KEEP_ALIVE
         self._generate_url = f"{self.host}/api/generate"
 
-    def _payload(self, prompt: str, max_new_tokens: int, temperature: float, stream: bool) -> dict:
+    def _payload(self, prompt: str, max_new_tokens: int, temperature: float, stream: bool, top_p: float) -> dict:
         return {
             "model": self.model,
             "prompt": prompt,
@@ -57,7 +62,7 @@ class LLMEngine:
             "keep_alive": self.keep_alive,
             "options": {
                 "temperature": temperature,
-                "top_p": 0.85,
+                "top_p": top_p,
                 "num_predict": max_new_tokens,
                 "num_ctx": self.num_ctx,
             },
@@ -71,7 +76,7 @@ class LLMEngine:
             resp = requests.post(
                 self._generate_url,
                 json={"model": self.model, "keep_alive": self.keep_alive},
-                timeout=600,
+                timeout=(10, 600),
             )
             resp.raise_for_status()
             logger.info(f"Loaded '{self.model}' on {self.host}")
@@ -107,18 +112,24 @@ class LLMEngine:
         max_new_tokens: int = 512,
         temperature: float = 0.2,
         stream: bool = False,
+        top_p: float = 0.85,
     ) -> Union[str, Iterator[str]]:
         """Prompt the shared model. Returns a string, or an iterator of token
         strings when stream=True."""
-        payload = self._payload(prompt, max_new_tokens, temperature, stream)
+        payload = self._payload(prompt, max_new_tokens, temperature, stream, top_p)
         if stream:
             return self._stream(payload)
         return self._complete(payload)
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10), reraise=True)
+    def _post(self, payload: dict, stream: bool = False) -> requests.Response:
+        resp = requests.post(self._generate_url, json=payload, stream=stream, timeout=(10, 600))
+        resp.raise_for_status()
+        return resp
+
     def _complete(self, payload: dict) -> str:
         try:
-            resp = requests.post(self._generate_url, json=payload, timeout=600)
-            resp.raise_for_status()
+            resp = self._post(payload)
             return resp.json().get("response", "").strip()
         except requests.RequestException:
             logger.exception("Generation request failed")
@@ -126,20 +137,22 @@ class LLMEngine:
 
     def _stream(self, payload: dict) -> Iterator[str]:
         try:
-            with requests.post(self._generate_url, json=payload, stream=True, timeout=600) as resp:
-                resp.raise_for_status()
-                for line in resp.iter_lines():
-                    if not line:
-                        continue
-                    try:
-                        obj = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    chunk = obj.get("response", "")
-                    if chunk:
-                        yield chunk
-                    if obj.get("done"):
-                        break
+            resp = self._post(payload, stream=True)
         except requests.RequestException:
             logger.exception("Streaming request failed")
             raise
+        try:
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                chunk = obj.get("response", "")
+                if chunk:
+                    yield chunk
+                if obj.get("done"):
+                    break
+        finally:
+            resp.close()
