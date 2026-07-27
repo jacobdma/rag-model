@@ -1,10 +1,10 @@
 import hashlib
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from exchangelib import Credentials, Account, Configuration as ExchangeConfig, DELEGATE, Q
+from exchangelib import Credentials, Account, Configuration as ExchangeConfig, DELEGATE, FailFast, Q
 from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
@@ -12,21 +12,21 @@ logger = logging.getLogger(__name__)
 
 class EmailRetriever:
     """Retrieves emails directly from Exchange server using exchangelib."""
-    
-    # Cache structure: {username:query_hash: {"results": [Documents], "expires_at": timestamp}}
-    _cache = {}
+
     CACHE_TTL = 300  # 5 minutes
     SEARCH_YEARS = 4  # Search last 4 years
-    
+
     def __init__(self, username: str, password: str, email_address: str, server: str):
         """Initialize Exchange connection."""
         self.username = username
         self.email_address = email_address
         self.server = server
-        
+        # Cache structure: {query_hash: {"results": [Documents], "expires_at": timestamp}}
+        self._cache = {}
+
         try:
             credentials = Credentials(username=username, password=password)
-            config = ExchangeConfig(server=server, credentials=credentials)
+            config = ExchangeConfig(server=server, credentials=credentials, retry_policy=FailFast())
             self.account = Account(
                 primary_smtp_address=email_address,
                 config=config,
@@ -36,6 +36,10 @@ class EmailRetriever:
         except Exception:
             logger.exception("Failed to connect to Exchange")
             self.account = None
+
+    @property
+    def connected(self) -> bool:
+        return self.account is not None
     
     def retrieve_emails(self, query: str, max_results: int = 5) -> list[Document]:
         """Search Exchange emails and return full emails as Documents."""
@@ -55,7 +59,7 @@ class EmailRetriever:
             if not keywords:
                 return []
             
-            since_date = datetime.now() - timedelta(days=365 * self.SEARCH_YEARS)
+            since_date = datetime.now(tz=timezone.utc) - timedelta(days=365 * self.SEARCH_YEARS)
             
             # Build search query
             search_filters = []
