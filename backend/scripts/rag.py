@@ -4,6 +4,7 @@ import os
 import threading
 import time
 import yaml
+from pathlib import Path
 
 # Third-party imports
 import requests
@@ -34,7 +35,8 @@ class RAGPipeline:
                 RAGPipeline.engine = get_llm_engine()
         self.engine = RAGPipeline.engine
 
-        with open("config.yaml", "r") as f:
+        config_path = Path(__file__).resolve().parent.parent / "config.yaml"
+        with open(config_path, "r") as f:
             config = yaml.safe_load(f)
         self.folder_paths = config["DOCUMENTS"]
 
